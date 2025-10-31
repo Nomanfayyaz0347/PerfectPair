@@ -1,8 +1,5 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import dbConnect from '@/lib/mongodb';
-import Admin from '@/models/Admin';
-import { InMemoryAdminStorage } from '@/lib/adminStorage';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -18,75 +15,43 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Try MongoDB first, fallback to in-memory
-          let useInMemory = false;
-          let admin = null;
+          // Simple admin authentication for production deployment
+          const defaultEmail = process.env.ADMIN_EMAIL || 'admin@matchmaker.com';
+          const defaultPassword = process.env.ADMIN_PASSWORD || 'securepassword';
           
-          try {
-            await dbConnect();
-            admin = await Admin.findOne({ email: credentials.email });
-            
-            if (!admin) {
-              // Create default admin in MongoDB if not exists
-              const defaultEmail = process.env.ADMIN_EMAIL || 'admin@matchmaker.com';
-              const defaultPassword = process.env.ADMIN_PASSWORD || 'securepassword';
-              
-              if (credentials.email === defaultEmail) {
-                admin = new Admin({
-                  email: defaultEmail,
-                  password: defaultPassword,
-                  name: 'Default Admin'
-                });
-                await admin.save();
-                console.log('Default admin created in MongoDB');
-              }
-            }
-            
-            if (admin) {
-              const isPasswordValid = await admin.comparePassword(credentials.password);
-              if (!isPasswordValid) {
-                console.log('Invalid password for MongoDB admin:', credentials.email);
-                return null;
-              }
-            }
-          } catch {
-            console.log('MongoDB connection failed, using in-memory admin storage');
-            useInMemory = true;
-          }
-          
-          if (useInMemory || !admin) {
-            // Fallback to in-memory storage
-            await InMemoryAdminStorage.initializeDefaultAdmin();
-            
-            const inMemoryAdmin = await InMemoryAdminStorage.findByEmail(credentials.email);
-            
-            if (!inMemoryAdmin) {
-              console.log('Admin not found in in-memory storage:', credentials.email);
-              return null;
-            }
-
-            const isPasswordValid = await InMemoryAdminStorage.verifyPassword(inMemoryAdmin, credentials.password);
-            
-            if (!isPasswordValid) {
-              console.log('Invalid password for in-memory admin:', credentials.email);
-              return null;
-            }
-            
+          if (credentials.email === defaultEmail && credentials.password === defaultPassword) {
             return {
-              id: inMemoryAdmin.email,
-              email: inMemoryAdmin.email,
-              name: inMemoryAdmin.name,
+              id: 'admin-1',
+              email: defaultEmail,
+              name: 'Admin',
               role: 'admin',
             };
           }
-
-          // MongoDB admin found and validated
-          return {
-            id: admin._id.toString(),
-            email: admin.email,
-            name: admin.name,
-            role: 'admin',
-          };
+          
+          // Try dynamic imports for database connection (avoid build-time issues)
+          try {
+            const { default: dbConnect } = await import('@/lib/mongodb');
+            const { default: Admin } = await import('@/models/Admin');
+            
+            await dbConnect();
+            const admin = await Admin.findOne({ email: credentials.email });
+            
+            if (admin) {
+              const isPasswordValid = await admin.comparePassword(credentials.password);
+              if (isPasswordValid) {
+                return {
+                  id: admin._id.toString(),
+                  email: admin.email,
+                  name: admin.name,
+                  role: 'admin',
+                };
+              }
+            }
+          } catch {
+            console.log('Database connection failed during auth, using default admin only');
+          }
+          
+          return null;
         } catch (error) {
           console.error('Auth error:', error);
           return null;

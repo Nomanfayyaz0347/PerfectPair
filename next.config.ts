@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   typedRoutes: true,
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 export default nextConfig;
