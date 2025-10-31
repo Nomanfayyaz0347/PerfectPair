@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -10,7 +11,16 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        console.log('🔐 Authorization attempt started');
+        console.log('Environment check:', {
+          hasSecret: !!process.env.NEXTAUTH_SECRET,
+          hasUrl: !!process.env.NEXTAUTH_URL,
+          hasAdminEmail: !!process.env.ADMIN_EMAIL,
+          hasAdminPassword: !!process.env.ADMIN_PASSWORD
+        });
+
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Missing credentials');
           return null;
         }
 
@@ -87,5 +97,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
+    error: '/login',
   },
+  debug: process.env.NODE_ENV === 'development',
 };
