@@ -7,8 +7,8 @@ import Link from 'next/link';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({
-    email: '',
-    password: ''
+    email: 'nomanfayyaz0347@gmail.com',
+    password: '03472418269khan'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password. Try: admin@matchmaker.com / securepassword');
+        setError('Invalid email or password. Try: nomanfayyaz0347@gmail.com / 03472418269khan');
       } else {
         router.push('/admin');
       }
@@ -60,28 +60,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center py-6 px-3 sm:py-12 sm:px-4 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50 flex items-center justify-center py-6 px-3 sm:py-12 sm:px-4 lg:px-8">
       <div className="max-w-sm sm:max-w-md w-full space-y-6 sm:space-y-8">
         <div>
-          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center mb-4 shadow-sm">
             <span className="text-white text-2xl">💕</span>
           </div>
-          <h2 className="text-center text-2xl sm:text-3xl font-black bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h2 className="text-center text-2xl sm:text-3xl text-gray-900 mb-2 heading tracking-wide">
             PerfectPair
           </h2>
-          <h3 className="text-center text-lg sm:text-xl font-bold text-gray-900 mb-2">
+          <h3 className="text-center text-lg sm:text-xl text-gray-900 mb-2 heading">
             Admin Login
           </h3>
-          <p className="text-center text-sm text-gray-600 px-2">
+          <p className="text-center text-sm font-light text-gray-600 px-2 tracking-wide">
             Access the PerfectPair admin dashboard
           </p>
-          <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs sm:text-sm text-blue-800 text-center">
-              <strong>Default Login:</strong><br />
-              Email: admin@perfectpair.com<br />
-              Password: securepassword
-            </p>
-          </div>
+
         </div>
         
         <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg" onSubmit={handleSubmit}>
@@ -93,7 +87,7 @@ export default function LoginPage() {
           
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-light text-gray-700 tracking-wide">
                 Email
               </label>
               <input
@@ -103,13 +97,13 @@ export default function LoginPage() {
                 required
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 text-base sm:text-sm touch-manipulation"
+                className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 text-base sm:text-sm touch-manipulation"
                 placeholder="Enter your email"
               />
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-light text-gray-700 tracking-wide">
                 Password
               </label>
               <input
@@ -119,7 +113,7 @@ export default function LoginPage() {
                 required
                 value={credentials.password}
                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 text-base sm:text-sm touch-manipulation"
+                className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 text-base sm:text-sm touch-manipulation"
                 placeholder="Enter your password"
               />
             </div>
@@ -129,7 +123,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-light rounded-full text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all tracking-wide shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <div className="flex items-center">
@@ -145,7 +139,7 @@ export default function LoginPage() {
           <div className="text-center">
             <Link
               href="/"
-              className="text-purple-600 hover:text-purple-500 text-sm font-medium"
+              className="text-emerald-600 hover:text-emerald-500 text-sm font-light tracking-wide"
             >
               ← Back to Home
             </Link>

@@ -19,7 +19,15 @@ export const authOptions: NextAuthOptions = {
           const defaultEmail = process.env.ADMIN_EMAIL || 'admin@matchmaker.com';
           const defaultPassword = process.env.ADMIN_PASSWORD || 'securepassword';
           
+          console.log('Auth attempt:', { 
+            inputEmail: credentials.email, 
+            defaultEmail, 
+            inputPassword: credentials.password?.slice(0,3) + '***',
+            defaultPassword: defaultPassword?.slice(0,3) + '***'
+          });
+          
           if (credentials.email === defaultEmail && credentials.password === defaultPassword) {
+            console.log('Default admin login successful');
             return {
               id: 'admin-1',
               email: defaultEmail,

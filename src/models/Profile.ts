@@ -14,6 +14,9 @@ export interface IProfile extends mongoose.Document {
   address: string;
   contactNumber: string;
   photoUrl?: string;
+  status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
+  matchedWith?: string;
+  matchedDate?: Date;
   requirements: {
     ageRange: {
       min: number;
@@ -142,6 +145,19 @@ const ProfileSchema = new mongoose.Schema({
       required: false,
       trim: true,
     },
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Matched', 'Engaged', 'Married', 'Inactive'],
+    default: 'Active',
+  },
+  matchedWith: {
+    type: String,
+    required: false,
+  },
+  matchedDate: {
+    type: Date,
+    required: false,
   },
   isMatched: {
     type: Boolean,

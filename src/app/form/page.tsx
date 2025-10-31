@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface FormData {
   name: string;
@@ -234,17 +233,17 @@ export default function FormPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center py-12 px-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50 flex items-center justify-center py-12 px-4">
+        <div className="max-w-md w-full bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl shadow-sm p-8 text-center">
           <div className="text-6xl mb-6">✅</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Profile Created Successfully!</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl text-gray-900 mb-4 heading">Profile Created Successfully!</h2>
+          <p className="text-gray-600 mb-6 font-light">
             Thank you for creating your profile. Our team will review your information and contact you soon with potential matches.
           </p>
           <div className="space-y-4">
             <button
               onClick={() => setSuccess(false)}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-3 px-4 rounded-lg transition-all font-light shadow-md hover:shadow-lg"
             >
               Create Another Profile
             </button>
@@ -261,33 +260,33 @@ export default function FormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-4 sm:py-12 px-3 sm:px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50 py-4 sm:py-12 px-3 sm:px-4">
       <div className="max-w-2xl mx-auto">
         {/* Mobile-First Header */}
         <div className="text-center mb-6 sm:mb-8">
-          <Link href="/" className="inline-flex items-center text-purple-600 hover:text-purple-500 mb-3 sm:mb-4 text-sm sm:text-base">
+          <Link href="/" className="inline-flex items-center text-emerald-600 hover:text-emerald-500 mb-3 sm:mb-4 text-sm sm:text-base font-light tracking-wide">
             ← Back to Home
           </Link>
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white text-lg">💕</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">PerfectPair</h1>
+            <h1 className="text-2xl sm:text-3xl text-gray-900 heading tracking-wide">PerfectPair</h1>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Create Your Profile</h2>
-          <p className="text-sm sm:text-base text-gray-600 px-2">Join thousands who found their perfect match</p>
+          <h2 className="text-xl sm:text-2xl text-gray-900 mb-2 heading">Create Your Profile</h2>
+          <p className="text-sm sm:text-base font-light text-gray-600 px-2 tracking-wide">Join thousands who found their perfect match</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+        <form onSubmit={handleSubmit} className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-light">
               {error}
             </div>
           )}
 
           {/* Mobile-First Personal Information */}
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
+            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Personal Information</h2>
             <div className="grid grid-cols-1 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
@@ -297,7 +296,7 @@ export default function FormPage() {
                   required
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 touch-manipulation"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
               
@@ -309,7 +308,7 @@ export default function FormPage() {
                   required
                   value={formData.fatherName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 touch-manipulation"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
               
@@ -324,7 +323,7 @@ export default function FormPage() {
                     max="80"
                     value={formData.age || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 touch-manipulation"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                 </div>
                 
@@ -336,7 +335,7 @@ export default function FormPage() {
                     placeholder="5.6 feet"
                     value={formData.height}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 touch-manipulation"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                 </div>
               </div>
@@ -350,7 +349,7 @@ export default function FormPage() {
                     placeholder="65 kg"
                     value={formData.weight}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 touch-manipulation"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                 </div>
                 
@@ -360,7 +359,7 @@ export default function FormPage() {
                     name="color"
                     value={formData.color}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 sm:px-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 touch-manipulation"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   >
                     <option value="">Select</option>
                     <option value="Fair">Fair</option>
@@ -381,7 +380,7 @@ export default function FormPage() {
                         <img
                           src={photoPreview}
                           alt="Profile preview"
-                          className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-full mx-auto border-4 border-purple-200"
+                          className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-full mx-auto border-4 border-emerald-200"
                         />
                         <button
                           type="button"
@@ -392,7 +391,7 @@ export default function FormPage() {
                         </button>
                       </div>
                       <p className="text-sm text-gray-600">Photo selected successfully!</p>
-                      <label className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 cursor-pointer transition-colors">
+                      <label className="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 cursor-pointer transition-colors font-light">
                         <input
                           type="file"
                           className="hidden"
@@ -408,7 +407,7 @@ export default function FormPage() {
                       <div>
                         <p className="text-sm sm:text-base text-gray-600 mb-2">Upload your profile photo</p>
                         <p className="text-xs text-gray-500 mb-4">Maximum size: 5MB | Formats: JPG, PNG, GIF</p>
-                        <label className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition-colors touch-manipulation">
+                        <label className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg cursor-pointer transition-all touch-manipulation font-light shadow-md hover:shadow-lg">
                           <input
                             type="file"
                             className="hidden"
@@ -427,8 +426,8 @@ export default function FormPage() {
 
           {/* Professional Information */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Professional Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Professional Information</h2>
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Education *</label>
                 <input
@@ -438,7 +437,7 @@ export default function FormPage() {
                   placeholder="e.g., Bachelor's in Engineering"
                   value={formData.education}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
               
@@ -451,11 +450,11 @@ export default function FormPage() {
                   placeholder="e.g., Software Engineer"
                   value={formData.occupation}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
               
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Monthly Income</label>
                 <input
                   type="text"
@@ -463,7 +462,7 @@ export default function FormPage() {
                   placeholder="e.g., 50,000 PKR"
                   value={formData.income}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
             </div>
@@ -471,8 +470,8 @@ export default function FormPage() {
 
           {/* Family & Contact Information */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Family & Contact Information</h2>
-            <div className="space-y-6">
+            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Family & Contact Information</h2>
+            <div className="space-y-4 sm:space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Family Details</label>
                 <textarea
@@ -481,7 +480,7 @@ export default function FormPage() {
                   placeholder="Tell us about your family background..."
                   value={formData.familyDetails}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light resize-none"
                 />
               </div>
               
@@ -494,7 +493,7 @@ export default function FormPage() {
                   placeholder="Your current address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light resize-none"
                 />
               </div>
               
@@ -507,7 +506,7 @@ export default function FormPage() {
                   placeholder="e.g., +92 300 1234567"
                   value={formData.contactNumber}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
             </div>
@@ -515,8 +514,8 @@ export default function FormPage() {
 
           {/* Partner Requirements */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Partner Requirements</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Partner Requirements</h2>
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Age Range</label>
                 <div className="flex space-x-2">
@@ -527,7 +526,7 @@ export default function FormPage() {
                     max="80"
                     value={formData.requirements.ageRange.min || ''}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.ageRange', value: `min-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                   <input
                     type="number"
@@ -536,7 +535,7 @@ export default function FormPage() {
                     max="80"
                     value={formData.requirements.ageRange.max || ''}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.ageRange', value: `max-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                 </div>
               </div>
@@ -549,14 +548,14 @@ export default function FormPage() {
                     placeholder="Min (e.g., 5.0)"
                     value={formData.requirements.heightRange.min}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.heightRange', value: `min-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                   <input
                     type="text"
                     placeholder="Max (e.g., 6.0)"
                     value={formData.requirements.heightRange.max}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.heightRange', value: `max-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                   />
                 </div>
               </div>
@@ -569,7 +568,7 @@ export default function FormPage() {
                   placeholder="e.g., Graduate or above"
                   value={formData.requirements.education}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
               
@@ -581,7 +580,7 @@ export default function FormPage() {
                   placeholder="e.g., Professional"
                   value={formData.requirements.occupation}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
               
@@ -591,7 +590,7 @@ export default function FormPage() {
                   name="requirements.familyType"
                   value={formData.requirements.familyType}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 >
                   <option value="">Select family type</option>
                   <option value="Joint">Joint Family</option>
@@ -608,18 +607,18 @@ export default function FormPage() {
                   placeholder="e.g., Karachi, Lahore"
                   value={formData.requirements.location}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
                 />
               </div>
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="text-center pt-6">
+          <div className="text-center pt-4 sm:pt-6">
             <button
               type="submit"
               disabled={loading}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 sm:px-8 rounded-lg text-base sm:text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-light shadow-md hover:shadow-lg touch-manipulation"
             >
               {loading ? (
                 <div className="flex items-center justify-center">

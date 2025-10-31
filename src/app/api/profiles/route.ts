@@ -1,5 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper function to get single profile
+async function getSingleProfile(profileId: string) {
+  try {
+    let useInMemory = false;
+    let dbConnect, Profile, InMemoryStorage;
+    
+    try {
+      // Try MongoDB first
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      const storageModule = await import('@/lib/storage');
+      
+      dbConnect = dbModule.default;
+      Profile = profileModule.default;
+      InMemoryStorage = storageModule.InMemoryStorage;
+      
+      await dbConnect();
+      
+      const profile = await Profile.findById(profileId);
+      if (profile) {
+        return NextResponse.json({
+          profiles: [profile],
+          count: 1
+        });
+      } else {
+        return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      }
+      
+    } catch (dbError) {
+      console.log('MongoDB fetch failed, using in-memory storage:', dbError);
+      useInMemory = true;
+      
+      try {
+        const storageModule = await import('@/lib/storage');
+        InMemoryStorage = storageModule.InMemoryStorage;
+        
+        const profile = await InMemoryStorage.getProfileById(profileId);
+        if (profile) {
+          return NextResponse.json({
+            profiles: [profile],
+            count: 1
+          });
+        } else {
+          return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }
+        
+      } catch (storageError) {
+        console.error('In-memory storage failed:', storageError);
+        return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching single profile:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -114,6 +171,13 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    
+    // Check if requesting specific profile by ID
+    const profileId = searchParams.get('id');
+    if (profileId) {
+      return await getSingleProfile(profileId);
+    }
+    
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
