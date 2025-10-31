@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { InMemoryStorage } from '@/lib/storage';
 
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: RouteParams
 ) {
   try {
-    const { id: profileId } = await params;
+    const resolvedParams = await params;
+    const profileId = resolvedParams.id;
     
     // Find matches using the in-memory storage
     const matches = await InMemoryStorage.findMatches(profileId);
