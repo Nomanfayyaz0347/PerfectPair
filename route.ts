@@ -3,10 +3,10 @@ import { InMemoryStorage } from '@/lib/storage';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const profileId = params.id;
+    const { id: profileId } = await params;
     
     // Find matches using the in-memory storage
     const matches = await InMemoryStorage.findMatches(profileId);
