@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import Profile from '@/models/Profile';
-import { getProfiles, updateProfile } from '@/lib/storage';
 
 export async function PUT(
   request: NextRequest,
@@ -60,6 +57,7 @@ export async function PUT(
     if (isMongoId) {
       try {
         // Try MongoDB first for MongoDB-style IDs
+        const { default: dbConnect } = await import('@/lib/mongodb');
         await dbConnect();
         
         const updateData: {
@@ -80,6 +78,7 @@ export async function PUT(
           updateData.matchedDate = new Date(matchedDate);
         }
 
+        const { default: Profile } = await import('@/models/Profile');
         updatedProfile = await Profile.findByIdAndUpdate(
           profileId,
           updateData,
@@ -105,13 +104,14 @@ export async function PUT(
 
     if (useInMemory) {
       console.log('Using in-memory storage for profile update');
+      const { getProfiles, updateProfile } = await import('@/lib/storage');
       const profiles = getProfiles();
       console.log('Available profiles in memory:', profiles.length);
-      const profileIndex = profiles.findIndex(p => p._id === profileId);
+      const profileIndex = profiles.findIndex((p: { _id: string }) => p._id === profileId);
       
       if (profileIndex === -1) {
         console.log('Profile not found in memory storage:', profileId);
-        console.log('Available profile IDs:', profiles.map(p => p._id));
+        console.log('Available profile IDs:', profiles.map((p: { _id: string }) => p._id));
         return NextResponse.json(
           { error: 'Profile not found in any storage system' },
           { status: 404 }

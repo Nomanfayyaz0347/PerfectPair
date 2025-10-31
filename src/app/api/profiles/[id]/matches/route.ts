@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { InMemoryStorage } from '@/lib/storage';
 
 interface RouteParams {
   params: Promise<{
@@ -133,6 +132,7 @@ export async function GET(
       
       // Fallback to in-memory storage
       try {
+        const { InMemoryStorage } = await import('@/lib/storage');
         matches = await InMemoryStorage.findMatches(profileId);
         console.log(`In-memory matches found: ${matches.length}`);
       } catch (memError) {
