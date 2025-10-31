@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import Profile from '@/models/Profile';
-// Keep in-memory as fallback
-import { InMemoryStorage } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,13 +8,34 @@ export async function POST(request: NextRequest) {
 
     // Try MongoDB first, fallback to in-memory
     let useInMemory = false;
+    let dbConnect, Profile, InMemoryStorage;
     
     try {
+      // Dynamic imports to avoid build-time evaluation
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      const storageModule = await import('@/lib/storage');
+      
+      dbConnect = dbModule.default;
+      Profile = profileModule.default;
+      InMemoryStorage = storageModule.InMemoryStorage;
+      
       await dbConnect();
       console.log('Connected to MongoDB successfully');
     } catch (dbError) {
       console.log('MongoDB connection failed, using in-memory storage:', dbError);
       useInMemory = true;
+      
+      // Still need storage for fallback
+      try {
+        const storageModule = await import('@/lib/storage');
+        InMemoryStorage = storageModule.InMemoryStorage;
+      } catch {
+        return NextResponse.json(
+          { error: 'Storage initialization failed' },
+          { status: 500 }
+        );
+      }
     }
     
     // Validate required fields
@@ -46,6 +63,13 @@ export async function POST(request: NextRequest) {
     
     if (useInMemory) {
       // Use in-memory storage as fallback
+      if (!InMemoryStorage) {
+        return NextResponse.json(
+          { error: 'Storage not available' },
+          { status: 500 }
+        );
+      }
+      
       const profile = await InMemoryStorage.saveProfile(body);
       console.log('Profile saved in memory with ID:', profile._id);
       
@@ -55,6 +79,13 @@ export async function POST(request: NextRequest) {
       );
     } else {
       // Use MongoDB
+      if (!Profile) {
+        return NextResponse.json(
+          { error: 'Database model not available' },
+          { status: 500 }
+        );
+      }
+      
       const profile = new Profile(body);
       await profile.save();
       console.log('Profile saved in MongoDB with ID:', profile._id);
@@ -89,16 +120,44 @@ export async function GET(request: NextRequest) {
 
     // Try MongoDB first, fallback to in-memory
     let useInMemory = false;
+    let dbConnect, Profile, InMemoryStorage;
     
     try {
+      // Dynamic imports to avoid build-time evaluation
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      const storageModule = await import('@/lib/storage');
+      
+      dbConnect = dbModule.default;
+      Profile = profileModule.default;
+      InMemoryStorage = storageModule.InMemoryStorage;
+      
       await dbConnect();
     } catch {
       console.log('MongoDB connection failed for GET, using in-memory storage');
       useInMemory = true;
+      
+      // Still need storage for fallback
+      try {
+        const storageModule = await import('@/lib/storage');
+        InMemoryStorage = storageModule.InMemoryStorage;
+      } catch {
+        return NextResponse.json(
+          { error: 'Storage initialization failed' },
+          { status: 500 }
+        );
+      }
     }
 
     if (useInMemory) {
       // Use in-memory storage
+      if (!InMemoryStorage) {
+        return NextResponse.json(
+          { error: 'Storage not available' },
+          { status: 500 }
+        );
+      }
+      
       const filters = {
         search: searchParams.get('search') || undefined,
         ageMin: searchParams.get('ageMin') ? parseInt(searchParams.get('ageMin')!) : undefined,
@@ -149,6 +208,13 @@ export async function GET(request: NextRequest) {
       
       if (searchParams.get('occupation')) {
         filter.occupation = { $regex: searchParams.get('occupation'), $options: 'i' };
+      }
+      
+      if (!Profile) {
+        return NextResponse.json(
+          { error: 'Database model not available' },
+          { status: 500 }
+        );
       }
       
       const profiles = await Profile.find(filter)
