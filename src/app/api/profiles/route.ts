@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     console.log('📄 Form data received:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const requiredFields = ['name', 'fatherName', 'age', 'address', 'occupation', 'education', 'contactNumber'];
+    const requiredFields = ['name', 'fatherName', 'age', 'cast', 'address', 'occupation', 'education', 'contactNumber'];
     
     for (const field of requiredFields) {
       if (!body[field]) {
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         height: body.height || "5'5\"",
         weight: body.weight || "65kg",
         color: body.color || "Fair",
+        cast: body.cast || "Not specified",
         education: body.education,
         occupation: body.occupation,
         income: body.income || "Not specified",
@@ -104,13 +105,15 @@ export async function POST(request: NextRequest) {
         photoUrl: body.photoUrl || "/images/default-profile.png",
         familyDetails: body.familyDetails || "Family details not provided",
         status: 'Active',
+        sharedCount: 0,
         requirements: body.requirements || {
           ageRange: { min: 20, max: 35 },
           heightRange: { min: "5'0\"", max: "6'0\"" },
           education: 'Any',
           occupation: 'Any',
           familyType: 'Any',
-          location: 'Any'
+          location: 'Any',
+          cast: 'Any'
         },
         createdAt: new Date()
       };
