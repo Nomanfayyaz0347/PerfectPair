@@ -16,6 +16,7 @@ interface FormData {
   occupation: string;
   income: string;
   familyDetails: string;
+  houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   address: string;
   contactNumber: string;
   photoUrl?: string;
@@ -27,6 +28,7 @@ interface FormData {
     familyType: string;
     location: string;
     cast: string;
+    houseType: string;
   };
 }
 
@@ -49,6 +51,7 @@ export default function FormPage() {
     occupation: '',
     income: '',
     familyDetails: '',
+    houseType: 'Family House',
     address: '',
     contactNumber: '',
     photoUrl: '',
@@ -59,7 +62,8 @@ export default function FormPage() {
       occupation: '',
       familyType: '',
       location: '',
-      cast: ''
+      cast: '',
+      houseType: 'Any'
     }
   });
 
@@ -218,6 +222,7 @@ export default function FormPage() {
           occupation: '',
           income: '',
           familyDetails: '',
+          houseType: 'Family House',
           address: '',
           contactNumber: '',
           photoUrl: '',
@@ -228,7 +233,8 @@ export default function FormPage() {
             occupation: '',
             familyType: '',
             location: '',
-            cast: ''
+            cast: '',
+            houseType: 'Any'
           }
         });
         setSelectedPhoto(null);
@@ -563,6 +569,22 @@ export default function FormPage() {
                   className={textareaClasses}
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">House Type *</label>
+                <select
+                  name="houseType"
+                  required
+                  value={formData.houseType}
+                  onChange={handleInputChange}
+                  className={selectClasses}
+                >
+                  <option value="Family House">Family House</option>
+                  <option value="Own House">Own House</option>
+                  <option value="Rent">Rent</option>
+                  <option value="Apartment">Apartment</option>
+                </select>
+              </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
@@ -739,6 +761,22 @@ export default function FormPage() {
                     <option value="Same Cast">Same as Mine</option>
                     <option value="Any">Any Cast</option>
                   </optgroup>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred House Type</label>
+                <select
+                  name="requirements.houseType"
+                  value={formData.requirements.houseType}
+                  onChange={handleInputChange}
+                  className={selectClasses}
+                >
+                  <option value="Any">Any House Type</option>
+                  <option value="Own House">Own House</option>
+                  <option value="Family House">Family House</option>
+                  <option value="Rent">Rent</option>
+                  <option value="Apartment">Apartment</option>
                 </select>
               </div>
             </div>

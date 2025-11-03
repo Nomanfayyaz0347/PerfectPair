@@ -13,6 +13,7 @@ export interface IProfile extends mongoose.Document {
   occupation: string;
   income: string;
   familyDetails: string;
+  houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   address: string;
   contactNumber: string;
   photoUrl?: string;
@@ -34,6 +35,7 @@ export interface IProfile extends mongoose.Document {
     familyType: string;
     location: string;
     cast: string;
+    houseType: string;
   };
   isMatched: boolean;
   createdAt: Date;
@@ -99,6 +101,12 @@ const ProfileSchema = new mongoose.Schema({
     required: false,
     trim: true,
   },
+  houseType: {
+    type: String,
+    required: true,
+    enum: ['Own House', 'Rent', 'Family House', 'Apartment'],
+    default: 'Family House'
+  },
   address: {
     type: String,
     required: true,
@@ -160,6 +168,11 @@ const ProfileSchema = new mongoose.Schema({
       trim: true,
     },
     cast: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    houseType: {
       type: String,
       required: false,
       trim: true,

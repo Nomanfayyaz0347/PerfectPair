@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     console.log('📄 Form data received:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const requiredFields = ['name', 'fatherName', 'gender', 'age', 'cast', 'address', 'occupation', 'education', 'contactNumber'];
+    const requiredFields = ['name', 'fatherName', 'gender', 'age', 'cast', 'houseType', 'address', 'occupation', 'education', 'contactNumber'];
     
     for (const field of requiredFields) {
       if (!body[field]) {
@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
         contactNumber: body.contactNumber,
         photoUrl: body.photoUrl || "/images/default-profile.png",
         familyDetails: body.familyDetails || "Family details not provided",
+        houseType: body.houseType || "Family House",
         status: 'Active',
         sharedCount: 0,
         requirements: body.requirements || {
@@ -114,7 +115,8 @@ export async function POST(request: NextRequest) {
           occupation: 'Any',
           familyType: 'Any',
           location: 'Any',
-          cast: 'Any'
+          cast: 'Any',
+          houseType: 'Any'
         },
         createdAt: new Date()
       };
