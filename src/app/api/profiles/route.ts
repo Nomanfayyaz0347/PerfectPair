@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     console.log('📄 Form data received:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const requiredFields = ['name', 'fatherName', 'age', 'cast', 'address', 'occupation', 'education', 'contactNumber'];
+    const requiredFields = ['name', 'fatherName', 'gender', 'age', 'cast', 'address', 'occupation', 'education', 'contactNumber'];
     
     for (const field of requiredFields) {
       if (!body[field]) {
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       const profileData = {
         name: body.name,
         fatherName: body.fatherName,
+        gender: body.gender,
         age: parseInt(body.age) || 25,
         height: body.height || "5'5\"",
         weight: body.weight || "65kg",

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 export interface IProfile extends mongoose.Document {
   name: string;
   fatherName: string;
+  gender: 'Male' | 'Female';
   age: number;
   height: string;
   weight: string;
@@ -49,6 +50,11 @@ const ProfileSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
+  },
+  gender: {
+    type: String,
+    required: true,
+    enum: ['Male', 'Female'],
   },
   age: {
     type: Number,

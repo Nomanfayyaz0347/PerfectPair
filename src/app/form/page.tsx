@@ -6,6 +6,7 @@ import Link from 'next/link';
 interface FormData {
   name: string;
   fatherName: string;
+  gender: 'Male' | 'Female';
   age: number;
   height: string;
   weight: string;
@@ -38,6 +39,7 @@ export default function FormPage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     fatherName: '',
+    gender: 'Male',
     age: 0,
     height: '',
     weight: '',
@@ -206,6 +208,7 @@ export default function FormPage() {
         setFormData({
           name: '',
           fatherName: '',
+          gender: 'Male',
           age: 0,
           height: '',
           weight: '',
@@ -321,6 +324,20 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className={inputClasses}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
+                <select
+                  name="gender"
+                  required
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className={selectClasses}
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
