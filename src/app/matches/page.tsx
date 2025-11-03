@@ -23,6 +23,7 @@ interface Profile {
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
   matchedWith?: string;
   matchedDate?: string;
+  sharedCount?: number;
   requirements: {
     ageRange: { min: number; max: number };
     heightRange: { min: string; max: string };
@@ -73,7 +74,7 @@ function MatchesPageContent() {
     }
   }, [profileId]);
 
-  const shareOnWhatsApp = (profile: Profile) => {
+  const shareOnWhatsApp = async (profile: Profile) => {
     const message = `🌟 *Perfect Match Found!* 🌟
 
 👤 *Name:* ${profile.name}
@@ -109,20 +110,30 @@ _Shared from PerfectPair - Marriage Bureau System_`;
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
     
-    // Track shared profile in localStorage
-    const sharedKey = `shared_${currentProfile?._id}_${profile._id}`;
-    const currentTime = new Date().toISOString();
-    localStorage.setItem(sharedKey, currentTime);
-    
-    // Update shared count for main profile
-    const countKey = `shared_count_${currentProfile?._id}`;
-    const currentCount = parseInt(localStorage.getItem(countKey) || '0');
-    localStorage.setItem(countKey, (currentCount + 1).toString());
+    // Update share count in database instead of localStorage
+    if (currentProfile?._id) {
+      try {
+        const response = await fetch(`/api/profiles/${currentProfile._id}/share`, {
+          method: 'POST',
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Share count updated:', result.sharedCount);
+          // Refresh the profile to get updated count
+          fetchMatches();
+        } else {
+          console.error('❌ Failed to update share count');
+        }
+      } catch (error) {
+        console.error('❌ Error updating share count:', error);
+      }
+    }
     
     window.open(whatsappUrl, '_blank');
   };
 
-  const shareAllMatches = () => {
+  const shareAllMatches = async () => {
     if (matches.length === 0) return;
 
     const message = `🌟 *${matches.length} Perfect Matches Found for ${profileName || currentProfile?.name}!* 🌟
@@ -146,17 +157,29 @@ _Shared from PerfectPair - Marriage Bureau System_`;
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
     
-    // Track bulk share in localStorage
-    matches.forEach(match => {
-      const sharedKey = `shared_${currentProfile?._id}_${match._id}`;
-      const currentTime = new Date().toISOString();
-      localStorage.setItem(sharedKey, currentTime);
-    });
-    
-    // Update shared count for main profile (bulk share)
-    const countKey = `shared_count_${currentProfile?._id}`;
-    const currentCount = parseInt(localStorage.getItem(countKey) || '0');
-    localStorage.setItem(countKey, (currentCount + matches.length).toString());
+    // Update share count in database for bulk share
+    if (currentProfile?._id) {
+      try {
+        // Make multiple API calls to increment count by matches.length
+        const sharePromises = Array.from({ length: matches.length }, () =>
+          fetch(`/api/profiles/${currentProfile._id}/share`, {
+            method: 'POST',
+          })
+        );
+        
+        const responses = await Promise.all(sharePromises);
+        const successCount = responses.filter(r => r.ok).length;
+        
+        console.log(`✅ Bulk share: ${successCount}/${matches.length} counts updated`);
+        
+        // Refresh the profile to get updated count
+        if (successCount > 0) {
+          fetchMatches();
+        }
+      } catch (error) {
+        console.error('❌ Error updating bulk share count:', error);
+      }
+    }
     
     window.open(whatsappUrl, '_blank');
   };
@@ -288,19 +311,62 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                     <div className="bg-teal-50 rounded px-2 py-1 border border-teal-100">
                       <span className="text-teal-600 font-medium">Shared: </span>
                       <span className="text-teal-700 font-semibold">
-                        {typeof window !== 'undefined' && currentProfile ? 
-                          parseInt(localStorage.getItem(`shared_count_${currentProfile._id}`) || '0') : 0}
+                        {currentProfile?.sharedCount || 0}
                       </span>
                     </div>
                   </div>
 
                   {/* Looking For */}
-                  <div className="bg-emerald-50 border border-emerald-100 rounded p-2">
+                  <div className="bg-emerald-50 border border-emerald-100 rounded p-2 mb-2">
                     <div className="text-xs text-emerald-600 font-medium mb-1">Looking For:</div>
                     <div className="text-xs text-gray-700">
                       🎯 {currentProfile.requirements.ageRange.min}-{currentProfile.requirements.ageRange.max} years • 🎓 {currentProfile.requirements.education}
                     </div>
                   </div>
+
+                  {/* Matches Preview */}
+                  {matches.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-100 rounded p-2">
+                      <div className="text-xs text-blue-600 font-medium mb-2">Found Matches:</div>
+                      <div className="space-y-2 max-h-24 overflow-y-auto">
+                        {matches.slice(0, 3).map((match, index) => {
+                          // Calculate matching criteria
+                          const matchingCriteria = [];
+                          if (currentProfile.requirements.ageRange.min <= match.age && match.age <= currentProfile.requirements.ageRange.max) {
+                            matchingCriteria.push('Age');
+                          }
+                          if (currentProfile.requirements.education === match.education) {
+                            matchingCriteria.push('Education');
+                          }
+                          if (currentProfile.requirements.location === match.address) {
+                            matchingCriteria.push('Location');
+                          }
+                          
+                          return (
+                            <div key={match._id} className="bg-white border border-blue-200 rounded p-1.5">
+                              <div className="flex items-center space-x-2 text-xs mb-1">
+                                <div className="w-4 h-4 bg-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-blue-600 text-xs font-medium">{index + 1}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <span className="text-gray-800 font-medium">{match.name}</span>
+                                  <span className="text-gray-500 ml-1">({match.age}y)</span>
+                                </div>
+                              </div>
+                              <div className="text-xs text-green-600 ml-6">
+                                ✓ Matches: {matchingCriteria.length > 0 ? matchingCriteria.join(', ') : 'Basic criteria'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {matches.length > 3 && (
+                          <div className="text-xs text-blue-500 font-medium bg-white rounded p-1 text-center">
+                            +{matches.length - 3} more matches available
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

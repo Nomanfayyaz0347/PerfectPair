@@ -24,6 +24,7 @@ interface Profile {
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
   matchedWith?: string; // ID of the matched profile
   matchedDate?: string;
+  sharedCount?: number; // Database-tracked shared count
   requirements: {
     ageRange: { min: number; max: number };
     heightRange: { min: string; max: string };
@@ -45,8 +46,7 @@ export default function AdminDashboard() {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [profileMatches, setProfileMatches] = useState<Record<string, number>>({});
-  const [matchesCalculating, setMatchesCalculating] = useState(false);
-  const [sharedProfiles, setSharedProfiles] = useState<Record<string, number>>({});
+
   const [filters, setFilters] = useState({
     search: '',
     ageMin: '',
@@ -62,38 +62,13 @@ export default function AdminDashboard() {
     return profile._id || profile.id || '';
   };
 
-  // Helper function to get shared count from localStorage
-  const getSharedCount = (profileId: string): number => {
-    if (typeof window === 'undefined') return 0;
-    const countKey = `shared_count_${profileId}`;
-    return parseInt(localStorage.getItem(countKey) || '0');
+  // Helper function to get shared count from profile data (now from database)
+  const getSharedCount = (profile: Profile): number => {
+    // Use sharedCount from database, fallback to 0
+    return profile.sharedCount || 0;
   };
 
-  // Calculate matches for all profiles
-  const calculateAllMatches = async (profilesList: Profile[]) => {
-    setMatchesCalculating(true);
-    const matchCounts: Record<string, number> = {};
-    
-    for (const profile of profilesList) {
-      try {
-        const profileId = getProfileId(profile);
-        const response = await fetch(`/api/profiles/${profileId}/matches`);
-        if (response.ok) {
-          const matchData = await response.json();
-          matchCounts[profileId] = matchData.matches?.length || 0;
-        } else {
-          matchCounts[profileId] = 0;
-        }
-      } catch (error) {
-        console.error(`Error calculating matches for ${profile.name}:`, error);
-        const profileId = getProfileId(profile);
-        matchCounts[profileId] = 0;
-      }
-    }
-    
-    setProfileMatches(matchCounts);
-    setMatchesCalculating(false);
-  };
+
 
   const updateProfileStatus = async (profileId: string, status: string, matchedWithId?: string) => {
     console.log('🚀 updateProfileStatus CALLED with:', { profileId, status, matchedWithId });
@@ -165,34 +140,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const shareOnWhatsApp = (profile: Profile) => {
-    const message = `🌟 *Marriage Proposal* 🌟
-
-👤 *Name:* ${profile.name}
-📍 *Address:* ${profile.address}
-🎂 *Age:* ${profile.age} years
-🎓 *Education:* ${profile.education}
-💼 *Occupation:* ${profile.occupation}
-📏 *Height:* ${profile.height}
-⚖️ *Weight:* ${profile.weight}
-
-📞 *Contact for more details*
-
-_Shared via Marriage Bureau App_`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-    
-    // Track the share in localStorage
-    const currentShares = JSON.parse(localStorage.getItem('whatsappShares') || '{}');
-    const profileKey = profile._id || profile.name;
-    currentShares[profileKey] = (currentShares[profileKey] || 0) + 1;
-    localStorage.setItem('whatsappShares', JSON.stringify(currentShares));
-    
-    // Open WhatsApp
-    window.open(whatsappUrl, '_blank');
-  };
-
   const fetchProfiles = useCallback(async () => {
     try {
       const queryParams = new URLSearchParams();
@@ -225,10 +172,25 @@ _Shared via Marriage Bureau App_`;
           console.log('Profile sync failed:', syncError);
         }
         
-        // Calculate matches for all profiles
-        if (fetchedProfiles.length > 0) {
-          calculateAllMatches(fetchedProfiles);
+        // Fetch matches count for each profile
+        const matchCounts: Record<string, number> = {};
+        for (const profile of fetchedProfiles) {
+          try {
+            const profileId = getProfileId(profile);
+            const response = await fetch(`/api/profiles/${profileId}/matches`);
+            if (response.ok) {
+              const matchData = await response.json();
+              matchCounts[profileId] = matchData.matches?.length || 0;
+            } else {
+              matchCounts[profileId] = 0;
+            }
+          } catch {
+            const profileId = getProfileId(profile);
+            matchCounts[profileId] = 0;
+          }
         }
+        setProfileMatches(matchCounts);
+        
       }
     } catch (error) {
       console.error('Error fetching profiles:', error);
@@ -491,9 +453,9 @@ _Shared via Marriage Bureau App_`;
                                 <span className="text-gray-500 text-lg">👤</span>
                               </div>
                             )}
-                            {/* Number badge - exact like attachment */}
+                            {/* Number badge - show matches count */}
                             <div className="absolute -top-1 -left-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-xs font-bold">{profileMatches[getProfileId(profile)] || 5}</span>
+                              <span className="text-white text-xs font-bold">{profileMatches[getProfileId(profile)] || 0}</span>
                             </div>
                           </div>
                           <div className="flex-1">
@@ -545,11 +507,11 @@ _Shared via Marriage Bureau App_`;
                         <div className="flex justify-between items-center mb-4">
                           <div>
                             <span className="text-sm font-medium text-emerald-600">Matches:</span>
-                            <span className="ml-1 text-sm text-gray-900">{profileMatches[getProfileId(profile)] || 5} found</span>
+                            <span className="ml-1 text-sm text-gray-900">{profileMatches[getProfileId(profile)] || 0} found</span>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-purple-600">Shared:</span>
-                            <span className="ml-1 text-sm text-gray-900">{getSharedCount(getProfileId(profile)) || 6} profiles</span>
+                            <span className="ml-1 text-sm text-gray-900">{getSharedCount(profile)} shared</span>
                           </div>
                         </div>
 
@@ -568,7 +530,7 @@ _Shared via Marriage Bureau App_`;
                             href={`/matches?id=${getProfileId(profile)}&name=${encodeURIComponent(profile.name)}`}
                             className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium py-2 text-center transition-colors rounded-md"
                           >
-                            View All {profileMatches[getProfileId(profile)] || 5} Matches →
+                            View All Matches →
                           </Link>
                         </div>
 
@@ -705,7 +667,7 @@ _Shared via Marriage Bureau App_`;
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          {getSharedCount(getProfileId(profile))} shared
+                          {getSharedCount(profile)} shared
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-light">{profile.contactNumber}</td>
@@ -836,7 +798,7 @@ _Shared via Marriage Bureau App_`;
                       </div>
                       <div className="text-center">
                         <div className="text-lg sm:text-xl text-purple-700 heading">
-                          {getSharedCount(getProfileId(selectedProfile))}
+                          {getSharedCount(selectedProfile)}
                         </div>
                         <div className="text-xs text-purple-600 font-light">shared</div>
                       </div>

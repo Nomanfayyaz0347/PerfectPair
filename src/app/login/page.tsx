@@ -7,8 +7,8 @@ import Link from 'next/link';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({
-    email: 'nomanfayyaz0347@gmail.com',
-    password: '03472418269khan'
+    email: '',
+    password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password. Try: nomanfayyaz0347@gmail.com / 03472418269khan');
+        setError('Invalid email or password. Please contact admin for access.');
       } else {
         router.push('/admin');
       }
@@ -78,7 +78,7 @@ export default function LoginPage() {
 
         </div>
         
-        <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg" onSubmit={handleSubmit}>
+        <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg" onSubmit={handleSubmit} autoComplete="off">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm">
               {error}
@@ -95,6 +95,7 @@ export default function LoginPage() {
                 name="email"
                 type="email"
                 required
+                autoComplete="off"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 text-base sm:text-sm touch-manipulation"
@@ -111,6 +112,7 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 required
+                autoComplete="new-password"
                 value={credentials.password}
                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                 className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 text-base sm:text-sm touch-manipulation"

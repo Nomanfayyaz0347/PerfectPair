@@ -10,6 +10,7 @@ interface FormData {
   height: string;
   weight: string;
   color: string;
+  cast: string;
   education: string;
   occupation: string;
   income: string;
@@ -24,10 +25,16 @@ interface FormData {
     occupation: string;
     familyType: string;
     location: string;
+    cast: string;
   };
 }
 
 export default function FormPage() {
+  // Improved input styling
+  const inputClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light";
+  const selectClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white";
+  const textareaClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light resize-none";
+  
   const [formData, setFormData] = useState<FormData>({
     name: '',
     fatherName: '',
@@ -35,6 +42,7 @@ export default function FormPage() {
     height: '',
     weight: '',
     color: '',
+    cast: '',
     education: '',
     occupation: '',
     income: '',
@@ -48,7 +56,8 @@ export default function FormPage() {
       education: '',
       occupation: '',
       familyType: '',
-      location: ''
+      location: '',
+      cast: ''
     }
   });
 
@@ -201,6 +210,7 @@ export default function FormPage() {
           height: '',
           weight: '',
           color: '',
+          cast: '',
           education: '',
           occupation: '',
           income: '',
@@ -214,7 +224,8 @@ export default function FormPage() {
             education: '',
             occupation: '',
             familyType: '',
-            location: ''
+            location: '',
+            cast: ''
           }
         });
         setSelectedPhoto(null);
@@ -264,7 +275,7 @@ export default function FormPage() {
       <div className="max-w-2xl mx-auto">
         {/* Mobile-First Header */}
         <div className="text-center mb-6 sm:mb-8">
-          <Link href="/" className="inline-flex items-center text-emerald-600 hover:text-emerald-500 mb-3 sm:mb-4 text-sm sm:text-base font-light tracking-wide">
+          <Link href="/" className="inline-flex items-right text-emerald-600 hover:text-emerald-500 mb-3 sm:mb-4 text-sm sm:text-base font-light tracking-wide">
             ← Back to Home
           </Link>
           <div className="flex items-center justify-center space-x-3 mb-4">
@@ -273,8 +284,8 @@ export default function FormPage() {
             </div>
             <h1 className="text-2xl sm:text-3xl text-gray-900 heading tracking-wide">PerfectPair</h1>
           </div>
-          <h2 className="text-xl sm:text-2xl text-gray-900 mb-2 heading">Create Your Profile</h2>
-          <p className="text-sm sm:text-base font-light text-gray-600 px-2 tracking-wide">Join thousands who found their perfect match</p>
+          <h2 className="text-center text-xl sm:text-2xl text-gray-900 mb-2 heading">Create Your Profile</h2>
+          <p className="text-center text-sm sm:text-base font-light text-gray-600  tracking-wide">Join thousands who found their perfect match</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
@@ -296,7 +307,7 @@ export default function FormPage() {
                   required
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
               
@@ -308,7 +319,7 @@ export default function FormPage() {
                   required
                   value={formData.fatherName}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
               
@@ -323,7 +334,7 @@ export default function FormPage() {
                     max="80"
                     value={formData.age || ''}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                 </div>
                 
@@ -335,7 +346,7 @@ export default function FormPage() {
                     placeholder="5.6 feet"
                     value={formData.height}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                 </div>
               </div>
@@ -349,7 +360,7 @@ export default function FormPage() {
                     placeholder="65 kg"
                     value={formData.weight}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                 </div>
                 
@@ -359,7 +370,7 @@ export default function FormPage() {
                     name="color"
                     value={formData.color}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={selectClasses}
                   >
                     <option value="">Select</option>
                     <option value="Fair">Fair</option>
@@ -367,6 +378,58 @@ export default function FormPage() {
                     <option value="Dark">Dark</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Cast Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cast *</label>
+                <select
+                  name="cast"
+                  required
+                  value={formData.cast}
+                  onChange={handleInputChange}
+                  className={selectClasses}
+                >
+                  <option value="">Select Cast</option>
+                  {/* Major Casts */}
+                  <optgroup label="Major Casts">
+                    <option value="Rajput">Rajput</option>
+                    <option value="Jat">Jat</option>
+                    <option value="Gujjar">Gujjar</option>
+                    <option value="Awan">Awan</option>
+                    <option value="Arain">Arain</option>
+                    <option value="Sheikh">Sheikh</option>
+                    <option value="Malik">Malik</option>
+                    <option value="Chaudhary">Chaudhary</option>
+                  </optgroup>
+                  
+                  {/* Religious/Tribal */}
+                  <optgroup label="Religious/Tribal">
+                    <option value="Syed">Syed</option>
+                    <option value="Qureshi">Qureshi</option>
+                    <option value="Ansari">Ansari</option>
+                    <option value="Mughal">Mughal</option>
+                    <option value="Pathan">Pathan</option>
+                    <option value="Baloch">Baloch</option>
+                  </optgroup>
+                  
+                  {/* Professional/Occupational */}
+                  <optgroup label="Professional">
+                    <option value="Butt">Butt</option>
+                    <option value="Dar">Dar</option>
+                    <option value="Lone">Lone</option>
+                    <option value="Khan">Khan</option>
+                    <option value="Khatri">Khatri</option>
+                  </optgroup>
+                  
+                  {/* Others */}
+                  <optgroup label="Others">
+                    <option value="Kashmiri">Kashmiri</option>
+                    <option value="Punjabi">Punjabi</option>
+                    <option value="Sindhi">Sindhi</option>
+                    <option value="Other">Other</option>
+                  </optgroup>
+                </select>
               </div>
 
               {/* Photo Upload Section */}
@@ -437,7 +500,7 @@ export default function FormPage() {
                   placeholder="e.g., Bachelor's in Engineering"
                   value={formData.education}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
               
@@ -450,7 +513,7 @@ export default function FormPage() {
                   placeholder="e.g., Software Engineer"
                   value={formData.occupation}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
               
@@ -462,7 +525,7 @@ export default function FormPage() {
                   placeholder="e.g., 50,000 PKR"
                   value={formData.income}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
             </div>
@@ -480,7 +543,7 @@ export default function FormPage() {
                   placeholder="Tell us about your family background..."
                   value={formData.familyDetails}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light resize-none"
+                  className={textareaClasses}
                 />
               </div>
               
@@ -493,7 +556,7 @@ export default function FormPage() {
                   placeholder="Your current address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light resize-none"
+                  className={textareaClasses}
                 />
               </div>
               
@@ -506,7 +569,7 @@ export default function FormPage() {
                   placeholder="e.g., +92 300 1234567"
                   value={formData.contactNumber}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
             </div>
@@ -526,7 +589,7 @@ export default function FormPage() {
                     max="80"
                     value={formData.requirements.ageRange.min || ''}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.ageRange', value: `min-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                   <input
                     type="number"
@@ -535,7 +598,7 @@ export default function FormPage() {
                     max="80"
                     value={formData.requirements.ageRange.max || ''}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.ageRange', value: `max-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                 </div>
               </div>
@@ -548,14 +611,14 @@ export default function FormPage() {
                     placeholder="Min (e.g., 5.0)"
                     value={formData.requirements.heightRange.min}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.heightRange', value: `min-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                   <input
                     type="text"
                     placeholder="Max (e.g., 6.0)"
                     value={formData.requirements.heightRange.max}
                     onChange={(e) => handleInputChange({ target: { name: 'requirements.heightRange', value: `max-${e.target.value}` } } as React.ChangeEvent<HTMLInputElement>)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                    className={inputClasses}
                   />
                 </div>
               </div>
@@ -568,7 +631,7 @@ export default function FormPage() {
                   placeholder="e.g., Graduate or above"
                   value={formData.requirements.education}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
               
@@ -580,7 +643,7 @@ export default function FormPage() {
                   placeholder="e.g., Professional"
                   value={formData.requirements.occupation}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
               </div>
               
@@ -590,7 +653,7 @@ export default function FormPage() {
                   name="requirements.familyType"
                   value={formData.requirements.familyType}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={selectClasses}
                 >
                   <option value="">Select family type</option>
                   <option value="Joint">Joint Family</option>
@@ -607,8 +670,59 @@ export default function FormPage() {
                   placeholder="e.g., Karachi, Lahore"
                   value={formData.requirements.location}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                  className={inputClasses}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Cast</label>
+                <select
+                  name="requirements.cast"
+                  value={formData.requirements.cast}
+                  onChange={handleInputChange}
+                  className={selectClasses}
+                >
+                  <option value="">Any Cast</option>
+                  {/* Major Casts */}
+                  <optgroup label="Major Casts">
+                    <option value="Rajput">Rajput</option>
+                    <option value="Jat">Jat</option>
+                    <option value="Gujjar">Gujjar</option>
+                    <option value="Awan">Awan</option>
+                    <option value="Arain">Arain</option>
+                    <option value="Sheikh">Sheikh</option>
+                    <option value="Malik">Malik</option>
+                    <option value="Chaudhary">Chaudhary</option>
+                  </optgroup>
+                  
+                  {/* Religious/Tribal */}
+                  <optgroup label="Religious/Tribal">
+                    <option value="Syed">Syed</option>
+                    <option value="Qureshi">Qureshi</option>
+                    <option value="Ansari">Ansari</option>
+                    <option value="Mughal">Mughal</option>
+                    <option value="Pathan">Pathan</option>
+                    <option value="Baloch">Baloch</option>
+                  </optgroup>
+                  
+                  {/* Professional/Occupational */}
+                  <optgroup label="Professional">
+                    <option value="Butt">Butt</option>
+                    <option value="Dar">Dar</option>
+                    <option value="Lone">Lone</option>
+                    <option value="Khan">Khan</option>
+                    <option value="Khatri">Khatri</option>
+                  </optgroup>
+                  
+                  {/* Others */}
+                  <optgroup label="Others">
+                    <option value="Kashmiri">Kashmiri</option>
+                    <option value="Punjabi">Punjabi</option>
+                    <option value="Sindhi">Sindhi</option>
+                    <option value="Same Cast">Same as Mine</option>
+                    <option value="Any">Any Cast</option>
+                  </optgroup>
+                </select>
               </div>
             </div>
           </div>

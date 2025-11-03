@@ -45,10 +45,10 @@ export default function Home() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-3 py-12 sm:px-6 sm:py-20 lg:px-8">
-          <div className="text-center">
+          <div className="text-left">
             {/* Mobile-First Heading */}
             <div className="mb-6 sm:mb-8 px-4 sm:px-0">
-              <span className=" inline-block text-xs sm:text-sm font-light text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 sm:px-4 sm:py-2 rounded-full mb-4 tracking-wide">
+              <span className=" inline-block text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 sm:px-4 sm:py-2 rounded-full mb-4 tracking-wide">
                 ✨ Premium Matchmaking
               </span>
               <h2 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl text-gray-900 mb-4 leading-tight tracking-wide heading">
@@ -74,14 +74,8 @@ export default function Home() {
               >
                 <span className="flex items-center justify-center">
                   <span className="mr-2 text-sm sm:text-base">💝</span>
-                  <span className="text-sm sm:text-base font-light tracking-wide">Start Your Journey</span>
+                  <span className="text-sm sm:text-base font-light tracking-wide">Find My Match</span>
                 </span>
-              </Link>
-              <Link
-                href="/login"
-                className="w-full bg-white text-gray-700 px-6 py-3 sm:px-8 sm:py-4 rounded-full text-sm sm:text-lg font-light tracking-wide border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-300 touch-manipulation"
-              >
-                Admin Panel
               </Link>
             </div>
 
@@ -107,7 +101,7 @@ export default function Home() {
       {/* Mobile-First Features Section */}
       <section className="relative py-12 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-12">
+          <div className=" mb-8 sm:mb-12">
             <h3 className="text-xl sm:text-2xl lg:text-3xl text-gray-900 mb-3 sm:mb-4 px-4 tracking-wide heading">
               Why Choose 
               <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent"> PerfectPair?</span>
@@ -146,8 +140,8 @@ export default function Home() {
       {/* Modern Footer */}
       <footer className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 text-white">
         <div className="max-w-7xl mx-auto px-3 py-12 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-3 mb-6">
+          <div className="text-left">
+            <div className="flex items-center justify-left space-x-3 mb-6">
               <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
                 <span className="text-white text-xl">💕</span>
               </div>
@@ -156,7 +150,7 @@ export default function Home() {
                 <p className="text-gray-300 text-sm font-light tracking-wide">Find Your Perfect Match</p>
               </div>
             </div>
-            <div className="w-24 h-px bg-gradient-to-r from-emerald-500 to-teal-500 mx-auto mb-6"></div>
+            <div className="w-full h-px bg-gradient-to-r from-emerald-500 to-teal-500 mx-auto mb-6"></div>
             <p className="text-gray-300 font-light tracking-wide">
               © 2025 PerfectPair. All rights reserved. Made with ❤️ for bringing souls together.
             </p>

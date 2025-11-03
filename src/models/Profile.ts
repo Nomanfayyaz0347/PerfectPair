@@ -7,6 +7,7 @@ export interface IProfile extends mongoose.Document {
   height: string;
   weight: string;
   color: string;
+  cast: string;
   education: string;
   occupation: string;
   income: string;
@@ -17,6 +18,7 @@ export interface IProfile extends mongoose.Document {
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
   matchedWith?: string;
   matchedDate?: Date;
+  sharedCount: number;
   requirements: {
     ageRange: {
       min: number;
@@ -30,6 +32,7 @@ export interface IProfile extends mongoose.Document {
     occupation: string;
     familyType: string;
     location: string;
+    cast: string;
   };
   isMatched: boolean;
   createdAt: Date;
@@ -64,6 +67,11 @@ const ProfileSchema = new mongoose.Schema({
   color: {
     type: String,
     required: false,
+  },
+  cast: {
+    type: String,
+    required: true,
+    trim: true,
   },
   education: {
     type: String,
@@ -145,6 +153,11 @@ const ProfileSchema = new mongoose.Schema({
       required: false,
       trim: true,
     },
+    cast: {
+      type: String,
+      required: false,
+      trim: true,
+    },
   },
   status: {
     type: String,
@@ -162,6 +175,11 @@ const ProfileSchema = new mongoose.Schema({
   isMatched: {
     type: Boolean,
     default: false,
+  },
+  sharedCount: {
+    type: Number,
+    default: 0,
+    min: 0,
   },
 }, {
   timestamps: true, // This will add createdAt and updatedAt automatically
