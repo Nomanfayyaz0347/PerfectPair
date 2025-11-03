@@ -9,10 +9,12 @@ interface Profile {
   _id: string;
   name: string;
   fatherName: string;
+  gender: 'Male' | 'Female';
   age: number;
   height: string;
   weight: string;
   color: string;
+  cast: string;
   education: string;
   occupation: string;
   income: string;
@@ -31,6 +33,7 @@ interface Profile {
     occupation: string;
     familyType: string;
     location: string;
+    cast: string;
   };
   createdAt: string;
 }
@@ -79,10 +82,12 @@ function MatchesPageContent() {
 
 👤 *Name:* ${profile.name}
 👨‍👧 *Father's Name:* ${profile.fatherName}
+👫 *Gender:* ${profile.gender}
 🎂 *Age:* ${profile.age} years
 📏 *Height:* ${profile.height}
 ⚖️ *Weight:* ${profile.weight}
 🎨 *Complexion:* ${profile.color}
+🏛️ *Cast:* ${profile.cast}
 
 📚 *Education:* ${profile.education}
 💼 *Occupation:* ${profile.occupation}
@@ -141,7 +146,9 @@ _Shared from PerfectPair - Marriage Bureau System_`;
 ${matches.map((match, index) => `
 *${index + 1}. ${match.name}*
 👨‍👧 Father: ${match.fatherName}
+👫 Gender: ${match.gender}
 🎂 Age: ${match.age} years | 📏 Height: ${match.height}
+🏛️ Cast: ${match.cast}
 📚 Education: ${match.education}
 💼 Occupation: ${match.occupation}
 📍 ${match.address}
@@ -456,8 +463,16 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                           <span className="ml-1 text-sm text-gray-900">{match.age}</span>
                         </div>
                         <div>
+                          <span className="text-sm font-medium text-emerald-600">Gender:</span>
+                          <span className="ml-1 text-sm text-gray-900">{match.gender}</span>
+                        </div>
+                        <div>
                           <span className="text-sm font-medium text-emerald-600">Height:</span>
                           <span className="ml-1 text-sm text-gray-900">{match.height}</span>
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-emerald-600">Cast:</span>
+                          <span className="ml-1 text-sm text-gray-900">{match.cast}</span>
                         </div>
                       </div>
                       

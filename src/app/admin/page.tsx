@@ -10,10 +10,12 @@ interface Profile {
   id?: string;
   name: string;
   fatherName: string;
+  gender: 'Male' | 'Female';
   age: number;
   height: string;
   weight: string;
   color: string;
+  cast: string;
   education: string;
   occupation: string;
   income: string;
@@ -32,6 +34,7 @@ interface Profile {
     occupation: string;
     familyType: string;
     location: string;
+    cast: string;
   };
   createdAt: string;
 }
@@ -483,8 +486,16 @@ export default function AdminDashboard() {
                             <span className="ml-1 text-sm text-gray-900">{profile.age}</span>
                           </div>
                           <div>
+                            <span className="text-sm font-medium text-emerald-600">Gender:</span>
+                            <span className="ml-1 text-sm text-gray-900">{profile.gender}</span>
+                          </div>
+                          <div>
                             <span className="text-sm font-medium text-emerald-600">Height:</span>
                             <span className="ml-1 text-sm text-gray-900">{profile.height}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-emerald-600">Cast:</span>
+                            <span className="ml-1 text-sm text-gray-900">{profile.cast}</span>
                           </div>
                         </div>
                         
@@ -836,6 +847,10 @@ export default function AdminDashboard() {
                         <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.fatherName}</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
+                        <span className="text-xs sm:text-sm text-gray-600 heading">Gender:</span>
+                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.gender}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
                         <span className="text-xs sm:text-sm text-gray-600 heading">Age:</span>
                         <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.age} years</span>
                       </div>
@@ -850,6 +865,10 @@ export default function AdminDashboard() {
                       <div className="flex justify-between items-center py-2">
                         <span className="text-xs sm:text-sm text-gray-600 heading">Complexion:</span>
                         <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.color}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs sm:text-sm text-gray-600 heading">Cast:</span>
+                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.cast}</span>
                       </div>
                     </div>
                   </div>

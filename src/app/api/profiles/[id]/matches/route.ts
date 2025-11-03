@@ -38,6 +38,11 @@ export async function GET(
       
       // Apply matching logic
       matches = allProfiles.filter(p => {
+        // First filter: Only opposite gender matches
+        if (currentProfile.gender === p.gender) {
+          return false; // Same gender, not a match
+        }
+        
         let score = 0;
         let totalCriteria = 0;
         
@@ -114,6 +119,39 @@ export async function GET(
               score++;
             } else if (reqLoc.includes('nearby') || profileLoc.includes('nearby')) {
               score += 0.5; // Partial match for nearby
+            }
+          }
+        } else {
+          score++; // No specific requirement means match
+        }
+        
+        // Cast matching - Important criteria
+        totalCriteria++;
+        if (currentProfile.requirements.cast) {
+          const reqCast = currentProfile.requirements.cast.toLowerCase();
+          const profileCast = p.cast.toLowerCase();
+          
+          if (reqCast.includes('any') || reqCast.includes('all') || reqCast === 'not specified') {
+            score++;
+          } else if (profileCast.includes(reqCast) || reqCast.includes(profileCast)) {
+            score++;
+          } else {
+            // Partial match for similar casts
+            const castGroups = {
+              'sheikh': ['shaikh', 'sheikh', 'shekh'],
+              'rajput': ['rajpoot', 'rajput'],
+              'malik': ['malick', 'malik'],
+              'khan': ['khan', 'pathan'],
+              'chaudhry': ['chaudry', 'chaudhary', 'chaudhri']
+            };
+            
+            for (const [main, variants] of Object.entries(castGroups)) {
+              if ((variants.some(v => reqCast.includes(v)) && variants.some(v => profileCast.includes(v))) ||
+                  (reqCast.includes(main) && variants.some(v => profileCast.includes(v))) ||
+                  (profileCast.includes(main) && variants.some(v => reqCast.includes(v)))) {
+                score++;
+                break;
+              }
             }
           }
         } else {
