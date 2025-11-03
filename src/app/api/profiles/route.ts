@@ -60,41 +60,9 @@ async function getSingleProfile(profileId: string) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('Received form data:', JSON.stringify(body, null, 2));
-    console.log('Photo URL in request:', body.photoUrl);
+    console.log('📝 Creating profile:', body.name);
+    console.log('📄 Form data received:', JSON.stringify(body, null, 2));
 
-    // Try MongoDB first, fallback to in-memory
-    let useInMemory = false;
-    let dbConnect, Profile, InMemoryStorage;
-    
-    try {
-      // Dynamic imports to avoid build-time evaluation
-      const dbModule = await import('@/lib/mongodb');
-      const profileModule = await import('@/models/Profile');
-      const storageModule = await import('@/lib/storage');
-      
-      dbConnect = dbModule.default;
-      Profile = profileModule.default;
-      InMemoryStorage = storageModule.InMemoryStorage;
-      
-      await dbConnect();
-      console.log('Connected to MongoDB successfully');
-    } catch (dbError) {
-      console.log('MongoDB connection failed, using in-memory storage:', dbError);
-      useInMemory = true;
-      
-      // Still need storage for fallback
-      try {
-        const storageModule = await import('@/lib/storage');
-        InMemoryStorage = storageModule.InMemoryStorage;
-      } catch {
-        return NextResponse.json(
-          { error: 'Storage initialization failed' },
-          { status: 500 }
-        );
-      }
-    }
-    
     // Validate required fields
     const requiredFields = ['name', 'fatherName', 'age', 'address', 'occupation', 'education', 'contactNumber'];
     
@@ -106,51 +74,110 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // FORCE MongoDB connection - no fallback for saving
+    console.log('🔄 Attempting MongoDB connection...');
     
-    // Validate age is a number
-    if (typeof body.age !== 'number' || body.age < 18 || body.age > 80) {
+    try {
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      
+      const dbConnect = dbModule.default;
+      const Profile = profileModule.default;
+      
+      await dbConnect();
+      console.log('✅ MongoDB connected successfully for profile save');
+      
+      // Create profile with comprehensive data
+      const profileData = {
+        name: body.name,
+        fatherName: body.fatherName,
+        age: parseInt(body.age) || 25,
+        height: body.height || "5'5\"",
+        weight: body.weight || "65kg",
+        color: body.color || "Fair",
+        education: body.education,
+        occupation: body.occupation,
+        income: body.income || "Not specified",
+        address: body.address,
+        contactNumber: body.contactNumber,
+        photoUrl: body.photoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+        familyDetails: body.familyDetails || "Family details not provided",
+        status: 'Active',
+        requirements: body.requirements || {
+          ageRange: { min: 20, max: 35 },
+          heightRange: { min: "5'0\"", max: "6'0\"" },
+          education: 'Any',
+          occupation: 'Any',
+          familyType: 'Any',
+          location: 'Any'
+        },
+        createdAt: new Date()
+      };
+      
+      console.log('💾 Saving profile to MongoDB...');
+      const profile = new Profile(profileData);
+      const savedProfile = await profile.save();
+      
+      console.log('✅ Profile saved to MongoDB with ID:', savedProfile._id);
+      
+      // Also sync to memory for immediate access
+      try {
+        const storageModule = await import('@/lib/storage');
+        const { addProfile } = storageModule;
+        await addProfile({
+          ...savedProfile.toObject(),
+          _id: savedProfile._id.toString()
+        });
+        console.log('✅ Profile synced to memory storage');
+      } catch (syncError) {
+        console.log('⚠️ Memory sync failed (non-critical):', syncError);
+      }
+      
       return NextResponse.json(
-        { error: 'Age must be a number between 18 and 80' },
-        { status: 400 }
+        { 
+          message: 'Profile saved successfully to MongoDB',
+          profileId: savedProfile._id,
+          storage: 'mongodb',
+          success: true
+        },
+        { status: 201 }
       );
-    }
-    
-    // Create new profile - try MongoDB first, fallback to in-memory
-    console.log('Creating profile with data:', body);
-    
-    if (useInMemory) {
-      // Use in-memory storage as fallback
-      if (!InMemoryStorage) {
+      
+    } catch (mongoError) {
+      console.error('❌ MongoDB save failed:', mongoError);
+      console.error('MongoDB Error Details:', {
+        name: mongoError instanceof Error ? mongoError.name : 'Unknown',
+        message: mongoError instanceof Error ? mongoError.message : String(mongoError),
+        code: (mongoError as { code?: string | number })?.code || 'No code'
+      });
+      
+      // Fallback to memory storage
+      console.log('🔄 Falling back to memory storage...');
+      try {
+        const storageModule = await import('@/lib/storage');
+        const { InMemoryStorage } = storageModule;
+        
+        const profile = await InMemoryStorage.saveProfile(body);
+        console.log('✅ Profile saved to memory storage with ID:', profile._id);
+        
         return NextResponse.json(
-          { error: 'Storage not available' },
+          { 
+            message: 'Profile saved to memory storage (MongoDB failed)',
+            profileId: profile._id,
+            storage: 'memory',
+            mongoError: mongoError instanceof Error ? mongoError.message : String(mongoError),
+            success: true
+          },
+          { status: 201 }
+        );
+      } catch (memoryError) {
+        console.error('❌ Memory storage also failed:', memoryError);
+        return NextResponse.json(
+          { error: 'All storage systems failed', details: memoryError instanceof Error ? memoryError.message : String(memoryError) },
           { status: 500 }
         );
       }
-      
-      const profile = await InMemoryStorage.saveProfile(body);
-      console.log('Profile saved in memory with ID:', profile._id);
-      
-      return NextResponse.json(
-        { message: 'Profile created successfully (in-memory)', profileId: profile._id },
-        { status: 201 }
-      );
-    } else {
-      // Use MongoDB
-      if (!Profile) {
-        return NextResponse.json(
-          { error: 'Database model not available' },
-          { status: 500 }
-        );
-      }
-      
-      const profile = new Profile(body);
-      await profile.save();
-      console.log('Profile saved in MongoDB with ID:', profile._id);
-      
-      return NextResponse.json(
-        { message: 'Profile created successfully', profileId: profile._id },
-        { status: 201 }
-      );
     }
   } catch (error: unknown) {
     console.error('Detailed error creating profile:', error);

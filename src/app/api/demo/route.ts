@@ -1,5 +1,86 @@
 import { NextResponse } from 'next/server';
 
+// Debug endpoint to check database connection and data
+export async function GET() {
+  try {
+    console.log('🔍 Debug endpoint called');
+    
+    // Check environment variables
+    const hasMongoUri = !!process.env.MONGODB_URI;
+    const mongoUriPreview = process.env.MONGODB_URI ? 
+      process.env.MONGODB_URI.substring(0, 20) + '...' : 'Not set';
+    
+    let profileCount = 0;
+    let connectionStatus = 'unknown';
+    let errorDetails = null;
+    
+    try {
+      console.log('🔄 Trying MongoDB connection...');
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      
+      const dbConnect = dbModule.default;
+      const Profile = profileModule.default;
+      
+      await dbConnect();
+      profileCount = await Profile.countDocuments();
+      connectionStatus = 'mongodb-connected';
+      console.log(`✅ MongoDB connected, ${profileCount} profiles found`);
+      
+    } catch (dbError) {
+      console.log('❌ MongoDB check failed:', dbError);
+      connectionStatus = 'mongodb-failed';
+      errorDetails = dbError instanceof Error ? dbError.message : String(dbError);
+      
+      try {
+        console.log('🔄 Trying in-memory storage...');
+        const storageModule = await import('@/lib/storage');
+        const InMemoryStorage = storageModule.InMemoryStorage;
+        const profiles = await InMemoryStorage.getAllProfiles();
+        profileCount = profiles.length;
+        connectionStatus = 'in-memory';
+        console.log(`✅ In-memory storage: ${profileCount} profiles found`);
+      } catch (storageError) {
+        connectionStatus = 'storage-failed';
+        console.log('❌ All storage methods failed');
+      }
+    }
+
+    return NextResponse.json({
+      status: 'debug-info',
+      timestamp: new Date().toISOString(),
+      environment: {
+        hasMongoUri,
+        mongoUriPreview,
+        nodeEnv: process.env.NODE_ENV,
+        hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
+        hasNextAuthUrl: !!process.env.NEXTAUTH_URL
+      },
+      database: {
+        connectionStatus,
+        profileCount,
+        errorDetails
+      },
+      instructions: {
+        loadDemoData: 'POST /api/demo',
+        clearAllData: 'DELETE /api/demo',
+        viewProfiles: 'GET /api/profiles'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Debug endpoint error:', error);
+    return NextResponse.json(
+      { 
+        error: 'Debug endpoint failed', 
+        details: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      },
+      { status: 500 }
+    );
+  }
+}
+
 // Demo profiles data - 20 diverse profiles
 const demoProfiles = [
   {
