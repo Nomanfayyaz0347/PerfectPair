@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     console.log('📄 Form data received:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const requiredFields = ['name', 'fatherName', 'gender', 'age', 'cast', 'houseType', 'address', 'occupation', 'education', 'contactNumber'];
+    const requiredFields = ['name', 'fatherName', 'gender', 'age', 'cast', 'houseType', 'country', 'city', 'occupation', 'education', 'contactNumber'];
     
     for (const field of requiredFields) {
       if (!body[field]) {
@@ -98,14 +98,19 @@ export async function POST(request: NextRequest) {
         weight: body.weight || "65kg",
         color: body.color || "Fair",
         cast: body.cast || "Not specified",
+        maslak: body.maslak || "Not specified",
+        maritalStatus: body.maritalStatus || "Single",
+        motherTongue: body.motherTongue || "Urdu",
+        belongs: body.belongs || "Pakistan",
         education: body.education,
         occupation: body.occupation,
         income: body.income || "Not specified",
-        address: body.address,
-        contactNumber: body.contactNumber,
-        photoUrl: body.photoUrl || "/images/default-profile.png",
         familyDetails: body.familyDetails || "Family details not provided",
         houseType: body.houseType || "Family House",
+        country: body.country || "Pakistan",
+        city: body.city || "Karachi",
+        contactNumber: body.contactNumber,
+        photoUrl: body.photoUrl || "/images/default-profile.png",
         status: 'Active',
         sharedCount: 0,
         requirements: body.requirements || {
@@ -114,9 +119,13 @@ export async function POST(request: NextRequest) {
           education: 'Any',
           occupation: 'Any',
           familyType: 'Any',
-          location: 'Any',
-          cast: 'Any',
-          houseType: 'Any'
+          location: [],
+          cast: [],
+          maslak: [],
+          maritalStatus: [],
+          motherTongue: [],
+          belongs: [],
+          houseType: []
         },
         createdAt: new Date()
       };
@@ -194,6 +203,101 @@ export async function POST(request: NextRequest) {
       console.error('Error stack:', error.stack);
     }
     
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { profileId, ...updateData } = body;
+    
+    console.log('📝 Updating profile:', profileId);
+    console.log('📄 Update data received:', JSON.stringify(updateData, null, 2));
+
+    if (!profileId) {
+      return NextResponse.json(
+        { error: 'Profile ID is required for update' },
+        { status: 400 }
+      );
+    }
+
+    // Try MongoDB first
+    try {
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      
+      const dbConnect = dbModule.default;
+      const Profile = profileModule.default;
+      
+      await dbConnect();
+      console.log('✅ MongoDB connected successfully for profile update');
+      
+      // Find and update profile
+      const updatedProfile = await Profile.findByIdAndUpdate(
+        profileId,
+        {
+          ...updateData,
+          updatedAt: new Date()
+        },
+        { new: true, runValidators: true }
+      );
+      
+      if (!updatedProfile) {
+        return NextResponse.json(
+          { error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
+      
+      console.log('✅ Profile updated in MongoDB:', updatedProfile._id);
+      
+      // Also sync to memory
+      try {
+        const storageModule = await import('@/lib/storage');
+        const { InMemoryStorage } = storageModule;
+        await InMemoryStorage.updateProfile(profileId, updateData);
+        console.log('✅ Profile synced to memory storage');
+      } catch (syncError) {
+        console.log('⚠️ Memory sync failed (non-critical):', syncError);
+      }
+      
+      return NextResponse.json({
+        message: 'Profile updated successfully',
+        profile: updatedProfile,
+        success: true
+      });
+      
+    } catch (mongoError) {
+      console.error('❌ MongoDB update failed:', mongoError);
+      
+      // Fallback to memory storage
+      try {
+        const storageModule = await import('@/lib/storage');
+        const { InMemoryStorage } = storageModule;
+        
+        const updatedProfile = await InMemoryStorage.updateProfile(profileId, updateData);
+        console.log('✅ Profile updated in memory storage');
+        
+        return NextResponse.json({
+          message: 'Profile updated in memory storage (MongoDB failed)',
+          profile: updatedProfile,
+          storage: 'memory',
+          success: true
+        });
+      } catch (memoryError) {
+        console.error('❌ Memory storage update also failed:', memoryError);
+        return NextResponse.json(
+          { error: 'All storage systems failed', details: memoryError instanceof Error ? memoryError.message : String(memoryError) },
+          { status: 500 }
+        );
+      }
+    }
+  } catch (error: unknown) {
+    console.error('Detailed error updating profile:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

@@ -63,19 +63,30 @@ export async function PUT(
         const updateData: {
           status: string;
           updatedAt: Date;
-          matchedWith?: string;
-          matchedDate?: Date;
+          matchedWith?: string | null;
+          matchedDate?: Date | null;
+          isMatched?: boolean;
         } = { 
           status,
           updatedAt: new Date()
         };
         
-        if (matchedWith) {
-          updateData.matchedWith = matchedWith;
-        }
-        
-        if (matchedDate) {
-          updateData.matchedDate = new Date(matchedDate);
+        // If status is not Active, clear matches and set isMatched to false
+        if (status !== 'Active') {
+          updateData.matchedWith = null;
+          updateData.matchedDate = null;
+          updateData.isMatched = false;
+          console.log('Clearing matches for non-Active status:', status);
+        } else {
+          // Only set matchedWith and matchedDate for Active status
+          if (matchedWith) {
+            updateData.matchedWith = matchedWith;
+            updateData.isMatched = true;
+          }
+          
+          if (matchedDate) {
+            updateData.matchedDate = new Date(matchedDate);
+          }
         }
 
         const { default: Profile } = await import('@/models/Profile');
@@ -121,10 +132,28 @@ export async function PUT(
       const updatedProfileData = {
         ...profiles[profileIndex],
         status,
-        matchedWith,
-        matchedDate,
         updatedAt: new Date().toISOString()
       };
+
+      // If status is not Active, clear matches
+      if (status !== 'Active') {
+        updatedProfileData.matchedWith = undefined;
+        updatedProfileData.matchedDate = undefined;
+        console.log('Clearing matches for non-Active status in memory:', status);
+      } else {
+        // Only set matchedWith and matchedDate for Active status
+        if (matchedWith) {
+          updatedProfileData.matchedWith = matchedWith;
+        } else {
+          updatedProfileData.matchedWith = undefined;
+        }
+        
+        if (matchedDate) {
+          updatedProfileData.matchedDate = matchedDate;
+        } else {
+          updatedProfileData.matchedDate = undefined;
+        }
+      }
 
       const result = updateProfile(profileId, updatedProfileData);
       if (!result) {

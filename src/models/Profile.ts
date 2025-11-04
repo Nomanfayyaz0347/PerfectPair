@@ -9,12 +9,17 @@ export interface IProfile extends mongoose.Document {
   weight: string;
   color: string;
   cast: string;
+  maslak: string;
+  maritalStatus: 'Single' | 'Divorced' | 'Widowed' | 'Separated';
+  motherTongue: string;
+  belongs: string;
   education: string;
   occupation: string;
   income: string;
   familyDetails: string;
   houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
-  address: string;
+  country: string;
+  city: string;
   contactNumber: string;
   photoUrl?: string;
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
@@ -33,9 +38,13 @@ export interface IProfile extends mongoose.Document {
     education: string;
     occupation: string;
     familyType: string;
-    location: string;
-    cast: string;
-    houseType: string;
+    location: string[];
+    cast: string[];
+    maslak: string[];
+    maritalStatus: string[];
+    motherTongue: string[];
+    belongs: string[];
+    houseType: string[];
   };
   isMatched: boolean;
   createdAt: Date;
@@ -81,6 +90,42 @@ const ProfileSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  maslak: {
+    type: String,
+    required: true,
+    trim: true,
+    enum: [
+      // Sunni Islam
+      'Hanafi', 'Shafi\'i', 'Maliki', 'Hanbali', 'Ahle Hadith', 'Deobandi', 'Barelvi', 'Jamaat-e-Islami',
+      // Shia Islam
+      'Twelver Shia', 'Ismaili', 'Zaidi', 'Alavi Bohra', 'Dawoodi Bohra',
+      // Sufi Orders
+      'Chishti', 'Qadri', 'Naqshbandi', 'Suhrawardi',
+      // Other Islamic Sects
+      'Ahmadiyya', 'Quranist', 'Non-denominational',
+      // Other Religions
+      'Christian', 'Hindu', 'Sikh', 'Other Religion'
+    ]
+  },
+  maritalStatus: {
+    type: String,
+    required: true,
+    trim: true,
+    enum: ['Single', 'Divorced', 'Widowed', 'Separated'],
+    default: 'Single'
+  },
+  motherTongue: {
+    type: String,
+    required: true,
+    trim: true,
+    enum: ['Urdu', 'English', 'Punjabi', 'Sindhi', 'Pashto', 'Balochi', 'Saraiki', 'Hindko', 'Kashmiri', 'Arabic', 'Persian', 'Turkish', 'Other']
+  },
+  belongs: {
+    type: String,
+    required: true,
+    trim: true,
+    enum: ['Pakistan', 'Bangladesh', 'India', 'Afghanistan', 'Iran', 'Turkey', 'Saudi Arabia', 'UAE', 'UK', 'USA', 'Canada', 'Australia', 'Other']
+  },
   education: {
     type: String,
     required: true,
@@ -107,7 +152,14 @@ const ProfileSchema = new mongoose.Schema({
     enum: ['Own House', 'Rent', 'Family House', 'Apartment'],
     default: 'Family House'
   },
-  address: {
+  country: {
+    type: String,
+    required: true,
+    trim: true,
+    enum: ['Pakistan', 'Bangladesh', 'India', 'Afghanistan', 'Iran', 'Turkey', 'Saudi Arabia', 'UAE', 'UK', 'USA', 'Canada', 'Australia', 'Other'],
+    default: 'Pakistan'
+  },
+  city: {
     type: String,
     required: true,
     trim: true,
@@ -163,19 +215,39 @@ const ProfileSchema = new mongoose.Schema({
       trim: true,
     },
     location: {
-      type: String,
+      type: [String],
       required: false,
-      trim: true,
+      default: [],
     },
     cast: {
-      type: String,
+      type: [String],
       required: false,
-      trim: true,
+      default: [],
+    },
+    maslak: {
+      type: [String],
+      required: false,
+      default: [],
+    },
+    maritalStatus: {
+      type: [String],
+      required: false,
+      default: [],
+    },
+    motherTongue: {
+      type: [String],
+      required: false,
+      default: [],
+    },
+    belongs: {
+      type: [String],
+      required: false,
+      default: [],
     },
     houseType: {
-      type: String,
+      type: [String],
       required: false,
-      trim: true,
+      default: [],
     },
   },
   status: {

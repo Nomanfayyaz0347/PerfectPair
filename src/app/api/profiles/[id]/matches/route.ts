@@ -60,150 +60,353 @@ export async function GET(
       });
       console.log('👥 Opposite gender profiles found:', allProfiles.length);
       
-      // Apply matching logic - profiles already filtered by opposite gender
+      // DYNAMIC & PERCENTAGE-BASED AUTHENTIC MATCHING
       matches = allProfiles.filter(p => {
-        console.log(`👤 Checking profile: ${p.name} (${p.gender})`);
+        console.log(`\n👤 Checking profile: ${p.name} (${p.gender})`);
         
-        // Skip if missing gender (safety check)
         if (!p.gender) {
           console.log(`❌ Profile missing gender: ${p.name}`);
           return false;
         }
         
-        console.log(`✅ Proceeding with match criteria for ${p.name}`);
+        const matchedFields = [];
+        let matchScore = 0;
+        let totalValidRequirements = 0;
         
-        // Gender already filtered at query level, so proceed with other criteria
+        // Helper function to check if requirement is valid
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isValidReq = (req: any) => {
+          if (!req) return false;
+          if (Array.isArray(req)) return req.length > 0 && !req.includes('any');
+          if (typeof req === 'string') return req !== '' && !['any', 'Any'].includes(req);
+          if (typeof req === 'object' && 'min' in req && 'max' in req) return true;
+          return false;
+        };
         
-        let score = 0;
-        let totalCriteria = 0;
+        // ================================
+        // DYNAMIC FIELD-BY-FIELD VERIFICATION
+        // ================================
         
-        // Age matching - Primary criteria
-        totalCriteria++;
-        let ageMatch = false;
-        
-        if (currentProfile.requirements && currentProfile.requirements.ageRange) {
-          ageMatch = currentProfile.requirements.ageRange.min <= p.age && 
-                    p.age <= currentProfile.requirements.ageRange.max;
-          console.log(`🎂 Age check: ${currentProfile.requirements.ageRange.min}-${currentProfile.requirements.ageRange.max} vs ${p.age} = ${ageMatch}`);
-        } else {
-          // If no age requirements, consider it a match
-          ageMatch = true;
-          console.log(`🎂 No age requirements set, considering match for ${p.name}`);
+        // 1. Age matching - Count as valid requirement if exists
+        if (isValidReq(currentProfile.requirements?.ageRange)) {
+          totalValidRequirements++;
+          const ageMatch = p.age >= currentProfile.requirements.ageRange.min && 
+                          p.age <= currentProfile.requirements.ageRange.max;
+          console.log(`🎂 Age: ${currentProfile.requirements.ageRange.min}-${currentProfile.requirements.ageRange.max} vs ${p.age} = ${ageMatch}`);
+          
+          if (ageMatch) {
+            matchedFields.push('Age Range');
+            matchScore++;
+          }
         }
-        if (ageMatch) score++;
         
-        // Education matching - Flexible
-        totalCriteria++;
-        if (currentProfile.requirements && currentProfile.requirements.education && 
-            currentProfile.requirements.education !== '' && currentProfile.requirements.education !== 'Any') {
+        // 2. Height matching - ONLY if requirements exist
+        if (isValidReq(currentProfile.requirements?.heightRange)) {
+          totalValidRequirements++;
+          const reqMinHeight = parseFloat(currentProfile.requirements.heightRange.min);
+          const reqMaxHeight = parseFloat(currentProfile.requirements.heightRange.max);
+          const profileHeight = parseFloat(p.height || '0');
+          
+          if (!isNaN(reqMinHeight) && !isNaN(reqMaxHeight) && !isNaN(profileHeight) && profileHeight > 0) {
+            const heightMatch = profileHeight >= reqMinHeight && profileHeight <= reqMaxHeight;
+            console.log(`📏 Height: ${reqMinHeight}-${reqMaxHeight} vs ${profileHeight} = ${heightMatch}`);
+            
+            if (heightMatch) {
+              matchedFields.push('Height Range');
+              matchScore++;
+            }
+          }
+        }
+        
+        // 3. Education matching - ONLY if specific requirements exist
+        if (isValidReq(currentProfile.requirements?.education)) {
+          totalValidRequirements++;
           const reqEdu = currentProfile.requirements.education.toLowerCase();
           const profileEdu = (p.education || '').toLowerCase();
           
-          console.log(`📚 Education check: "${reqEdu}" vs "${profileEdu}"`);
+          console.log(`📚 Education: "${reqEdu}" vs "${profileEdu}"`);
           
-          // More flexible education matching
-          if (reqEdu.includes('bachelor') && (profileEdu.includes('bachelor') || profileEdu.includes('master') || profileEdu.includes('phd'))) {
-            score++;
-            console.log(`✅ Education match: Bachelor level accepted`);
+          let eduMatch = false;
+          
+          if (reqEdu.includes('graduate') && (profileEdu.includes('bachelor') || profileEdu.includes('graduate') || profileEdu.includes('master'))) {
+            eduMatch = true;
+          } else if (reqEdu.includes('bachelor') && (profileEdu.includes('bachelor') || profileEdu.includes('master') || profileEdu.includes('phd'))) {
+            eduMatch = true;
           } else if (reqEdu.includes('master') && (profileEdu.includes('master') || profileEdu.includes('phd'))) {
-            score++;
-            console.log(`✅ Education match: Master level accepted`);
+            eduMatch = true;
           } else if (profileEdu.includes(reqEdu) || reqEdu.includes(profileEdu)) {
-            score++;
-            console.log(`✅ Education match: Direct match`);
+            eduMatch = true;
           }
-        } else {
-          score++; // No specific requirement means match
-          console.log(`📚 No education requirements, considering match`);
+          
+          if (eduMatch) {
+            matchedFields.push('Education Level');
+            matchScore++;
+            console.log(`✅ Education matched`);
+          } else {
+            console.log(`❌ Education mismatch`);
+          }
         }
         
-        // Occupation matching - Very flexible
-        totalCriteria++;
-        if (currentProfile.requirements && currentProfile.requirements.occupation && 
-            currentProfile.requirements.occupation !== '' && currentProfile.requirements.occupation !== 'Any') {
+        // 4. Occupation matching - ONLY if specific requirements exist
+        if (currentProfile.requirements?.occupation && 
+            currentProfile.requirements.occupation !== '' && 
+            !['any', 'Any', 'any occupation'].includes(currentProfile.requirements.occupation)) {
+            
           const reqOcc = currentProfile.requirements.occupation.toLowerCase();
           const profileOcc = (p.occupation || '').toLowerCase();
           
-          console.log(`💼 Occupation check: "${reqOcc}" vs "${profileOcc}"`);
+          console.log(`💼 Occupation: "${reqOcc}" vs "${profileOcc}"`);
           
-          if (reqOcc.includes('any') || reqOcc.includes('respectable') || reqOcc.includes('professional') || 
-              profileOcc.includes(reqOcc) || reqOcc.includes(profileOcc)) {
-            score++;
-            console.log(`✅ Occupation match accepted`);
-          } else {
-            console.log(`➡️ Occupation different but continuing`);
+          let occMatch = false;
+          
+          if (reqOcc.includes('professional') && (profileOcc.includes('engineer') || profileOcc.includes('doctor') || 
+              profileOcc.includes('teacher') || profileOcc.includes('manager') || profileOcc.includes('officer'))) {
+            occMatch = true;
+          } else if (reqOcc.includes('business') && (profileOcc.includes('business') || profileOcc.includes('entrepreneur'))) {
+            occMatch = true;
+          } else if (profileOcc.includes(reqOcc) || reqOcc.includes(profileOcc)) {
+            occMatch = true;
           }
-        } else {
-          score++; // No specific requirement means match
-          console.log(`💼 No occupation requirements, considering match`);
+          
+          if (occMatch) {
+            matchedFields.push('Work/Job');
+            matchScore++;
+            console.log(`✅ Occupation matched`);
+          } else {
+            console.log(`❌ Occupation mismatch`);
+          }
         }
         
-        // Location matching - Flexible
-        totalCriteria++;
-        if (currentProfile.requirements.location) {
-          const reqLoc = currentProfile.requirements.location.toLowerCase();
-          const profileLoc = p.address.toLowerCase();
-          
-          if (reqLoc.includes('any') || reqLoc.includes('major cities')) {
-            score++;
-          } else {
-            // Check for city names
-            const cities = ['lahore', 'karachi', 'islamabad', 'rawalpindi', 'peshawar', 'faisalabad', 'multan'];
-            const reqCities = cities.filter(city => reqLoc.includes(city));
-            const profileCities = cities.filter(city => profileLoc.includes(city));
+        // 5. Location matching - ONLY if specific requirements exist
+        if (currentProfile.requirements?.location && 
+            Array.isArray(currentProfile.requirements.location) && 
+            currentProfile.requirements.location.length > 0 &&
+            !currentProfile.requirements.location.includes('any')) {
             
-            if (reqCities.some(city => profileCities.includes(city))) {
-              score++;
-            } else if (reqLoc.includes('nearby') || profileLoc.includes('nearby')) {
-              score += 0.5; // Partial match for nearby
-            }
-          }
-        } else {
-          score++; // No specific requirement means match
-        }
-        
-        // Cast matching - Important criteria
-        totalCriteria++;
-        if (currentProfile.requirements.cast) {
-          const reqCast = currentProfile.requirements.cast.toLowerCase();
-          const profileCast = p.cast.toLowerCase();
+          const reqLocations = currentProfile.requirements.location.map((loc: string) => loc.toLowerCase());
+          const profileLoc = (p.city || p.address || '').toLowerCase();
           
-          if (reqCast.includes('any') || reqCast.includes('all') || reqCast === 'not specified') {
-            score++;
-          } else if (profileCast.includes(reqCast) || reqCast.includes(profileCast)) {
-            score++;
+          console.log(`📍 Location: [${reqLocations.join(', ')}] vs "${profileLoc}"`);
+          
+          const locationMatch = reqLocations.some((loc: string) =>
+            profileLoc.includes(loc) || loc.includes(profileLoc)
+          );          if (locationMatch) {
+            matchedFields.push('Location');
+            matchScore++;
+            console.log(`✅ Location matched`);
           } else {
-            // Partial match for similar casts
-            const castGroups = {
-              'sheikh': ['shaikh', 'sheikh', 'shekh'],
-              'rajput': ['rajpoot', 'rajput'],
-              'malik': ['malick', 'malik'],
-              'khan': ['khan', 'pathan'],
-              'chaudhry': ['chaudry', 'chaudhary', 'chaudhri']
-            };
-            
-            for (const [main, variants] of Object.entries(castGroups)) {
-              if ((variants.some(v => reqCast.includes(v)) && variants.some(v => profileCast.includes(v))) ||
-                  (reqCast.includes(main) && variants.some(v => profileCast.includes(v))) ||
-                  (profileCast.includes(main) && variants.some(v => reqCast.includes(v)))) {
-                score++;
-                break;
-              }
-            }
+            console.log(`❌ Location mismatch`);
           }
-        } else {
-          score++; // No specific requirement means match
         }
         
-        // Very lenient matching - just need opposite gender
-        const matchPercentage = totalCriteria > 0 ? (score / totalCriteria) : 1;
-        console.log(`📊 ${p.name} - Score: ${score}/${totalCriteria} (${Math.round(matchPercentage * 100)}%) - Age Match: ${ageMatch}`);
+        // 6. Cast matching - ONLY if specific requirements exist
+        if (currentProfile.requirements?.cast && 
+            Array.isArray(currentProfile.requirements.cast) && 
+            currentProfile.requirements.cast.length > 0 &&
+            !currentProfile.requirements.cast.includes('any')) {
+            
+          const reqCasts = currentProfile.requirements.cast.map((cast: string) => cast.toLowerCase());
+          const profileCast = (p.cast || '').toLowerCase();
+          
+          console.log(`👥 Cast: [${reqCasts.join(', ')}] vs "${profileCast}"`);
+          
+          const castMatch = reqCasts.some((cast: string) => 
+            profileCast.includes(cast) || cast.includes(profileCast) ||
+            cast === 'not specified'
+          );
+          
+          if (castMatch) {
+            matchedFields.push('Cast');
+            matchScore++;
+            console.log(`✅ Cast matched`);
+          } else {
+            console.log(`❌ Cast mismatch`);
+          }
+        }
         
-        // Accept all opposite gender profiles for now (we already filtered by gender)
-        // This ensures matches will be found
-        console.log(`✅ Accepting ${p.name} as match`);
-        return true;
+        // 7. Marital Status - ONLY if specific requirements exist
+        if (currentProfile.requirements?.maritalStatus && 
+            Array.isArray(currentProfile.requirements.maritalStatus) && 
+            currentProfile.requirements.maritalStatus.length > 0 &&
+            !currentProfile.requirements.maritalStatus.includes('any')) {
+            
+          const reqStatus = currentProfile.requirements.maritalStatus.map((status: string) => status.toLowerCase());
+          const profileStatus = (p.maritalStatus || '').toLowerCase();
+          
+          console.log(`💍 Marital: [${reqStatus.join(', ')}] vs "${profileStatus}"`);
+          
+          const statusMatch = reqStatus.some((status: string) => profileStatus.includes(status));
+          
+          if (statusMatch) {
+            matchedFields.push('Marital Status');
+            matchScore++;
+            console.log(`✅ Marital Status matched`);
+          }
+        }
+        
+        // 8. Family Type - ONLY if specific requirements exist
+        if (currentProfile.requirements?.familyType && 
+            currentProfile.requirements.familyType !== '' &&
+            !['any', 'Any', 'any family'].includes(currentProfile.requirements.familyType)) {
+            
+          const reqFamily = currentProfile.requirements.familyType.toLowerCase();
+          const profileFamily = (p.familyDetails || '').toLowerCase();
+          
+          console.log(`🏠 Family: "${reqFamily}" vs "${profileFamily}"`);
+          
+          if (profileFamily.includes(reqFamily) || 
+              (reqFamily.includes('joint') && profileFamily.includes('joint')) ||
+              (reqFamily.includes('nuclear') && profileFamily.includes('nuclear'))) {
+            matchedFields.push('Family Type');
+            matchScore++;
+            console.log(`✅ Family Type matched`);
+          }
+        }
+        
+        // 9. Mother Tongue - ONLY if specific requirements exist
+        if (currentProfile.requirements?.motherTongue && 
+            Array.isArray(currentProfile.requirements.motherTongue) && 
+            currentProfile.requirements.motherTongue.length > 0 &&
+            !currentProfile.requirements.motherTongue.includes('any')) {
+            
+          const reqLanguages = currentProfile.requirements.motherTongue.map((lang: string) => lang.toLowerCase());
+          const profileLang = (p.motherTongue || '').toLowerCase();
+          
+          console.log(`🗣️ Language: [${reqLanguages.join(', ')}] vs "${profileLang}"`);
+          
+          const langMatch = reqLanguages.some((lang: string) => profileLang.includes(lang));
+          
+          if (langMatch) {
+            matchedFields.push('Mother Tongue');
+            matchScore++;
+            console.log(`✅ Mother Tongue matched`);
+          }
+        }
+        
+        // 10. Maslak - ONLY if specific requirements exist
+        if (currentProfile.requirements?.maslak && 
+            Array.isArray(currentProfile.requirements.maslak) && 
+            currentProfile.requirements.maslak.length > 0 &&
+            !currentProfile.requirements.maslak.includes('any')) {
+            
+          const reqMaslak = currentProfile.requirements.maslak.map((m: string) => m.toLowerCase());
+          const profileMaslak = (p.maslak || '').toLowerCase();
+          
+          console.log(`🕌 Maslak: [${reqMaslak.join(', ')}] vs "${profileMaslak}"`);
+          
+          const maslakMatch = reqMaslak.some((m: string) => profileMaslak.includes(m));
+          
+          if (maslakMatch) {
+            matchedFields.push('Maslak');
+            matchScore++;
+            console.log(`✅ Maslak matched`);
+          }
+        }
+        
+        // 11. House Type - ONLY if specific requirements exist
+        if (currentProfile.requirements?.houseType && 
+            Array.isArray(currentProfile.requirements.houseType) && 
+            currentProfile.requirements.houseType.length > 0 &&
+            !currentProfile.requirements.houseType.includes('any')) {
+            
+          const reqHouse = currentProfile.requirements.houseType.map((h: string) => h.toLowerCase());
+          const profileHouse = (p.houseType || '').toLowerCase();
+          
+          console.log(`🏠 House: [${reqHouse.join(', ')}] vs "${profileHouse}"`);
+          
+          const houseMatch = reqHouse.some((h: string) => profileHouse.includes(h));
+          
+          if (houseMatch) {
+            matchedFields.push('House Type');
+            matchScore++;
+            console.log(`✅ House Type matched`);
+          }
+        }
+        
+        // 12. Belongs To - ONLY if specific requirements exist
+        if (currentProfile.requirements?.belongs && 
+            Array.isArray(currentProfile.requirements.belongs) && 
+            currentProfile.requirements.belongs.length > 0 &&
+            !currentProfile.requirements.belongs.includes('any')) {
+            
+          const reqBelongs = currentProfile.requirements.belongs.map((b: string) => b.toLowerCase());
+          const profileBelongs = (p.belongs || '').toLowerCase();
+          
+          console.log(`🌍 Belongs: [${reqBelongs.join(', ')}] vs "${profileBelongs}"`);
+          
+          const belongsMatch = reqBelongs.some((b: string) => profileBelongs.includes(b));
+          
+          if (belongsMatch) {
+            matchedFields.push('Belongs To');
+            matchScore++;
+            console.log(`✅ Belongs To matched`);
+          }
+        }
+        
+        // Add debug info about requirements
+        console.log(`🔍 Profile ${currentProfile.name} requirements analysis:`);
+        console.log(`   - Age Range: ${currentProfile.requirements?.ageRange ? 'YES' : 'NO'}`);
+        console.log(`   - Height Range: ${currentProfile.requirements?.heightRange ? 'YES' : 'NO'}`);
+        console.log(`   - Education: ${currentProfile.requirements?.education && currentProfile.requirements.education !== 'any' ? 'YES' : 'NO'}`);
+        console.log(`   - Occupation: ${currentProfile.requirements?.occupation && currentProfile.requirements.occupation !== 'any' ? 'YES' : 'NO'}`);
+        console.log(`   - Location: ${currentProfile.requirements?.location && Array.isArray(currentProfile.requirements.location) && currentProfile.requirements.location.length > 0 ? 'YES' : 'NO'}`);
+        console.log(`   - Cast: ${currentProfile.requirements?.cast && Array.isArray(currentProfile.requirements.cast) && currentProfile.requirements.cast.length > 0 ? 'YES' : 'NO'}`);
+        console.log(`   - Total Valid Requirements: ${[
+          currentProfile.requirements?.ageRange,
+          currentProfile.requirements?.heightRange,
+          currentProfile.requirements?.education && currentProfile.requirements.education !== 'any',
+          currentProfile.requirements?.occupation && currentProfile.requirements.occupation !== 'any',
+          currentProfile.requirements?.location && Array.isArray(currentProfile.requirements.location) && currentProfile.requirements.location.length > 0,
+          currentProfile.requirements?.cast && Array.isArray(currentProfile.requirements.cast) && currentProfile.requirements.cast.length > 0,
+          currentProfile.requirements?.maritalStatus && Array.isArray(currentProfile.requirements.maritalStatus) && currentProfile.requirements.maritalStatus.length > 0,
+          currentProfile.requirements?.familyType && currentProfile.requirements.familyType !== 'any',
+          currentProfile.requirements?.motherTongue && Array.isArray(currentProfile.requirements.motherTongue) && currentProfile.requirements.motherTongue.length > 0,
+          currentProfile.requirements?.maslak && Array.isArray(currentProfile.requirements.maslak) && currentProfile.requirements.maslak.length > 0,
+          currentProfile.requirements?.houseType && Array.isArray(currentProfile.requirements.houseType) && currentProfile.requirements.houseType.length > 0,
+          currentProfile.requirements?.belongs && Array.isArray(currentProfile.requirements.belongs) && currentProfile.requirements.belongs.length > 0
+        ].filter(Boolean).length}`)
+        
+        // ================================
+        // DYNAMIC PERCENTAGE CALCULATION
+        // ================================
+        
+        if (totalValidRequirements === 0) {
+          console.log(`⚠️ ${p.name} - No valid requirements found, skipping`);
+          return false;
+        }
+        
+        const matchPercentage = Math.round((matchScore / totalValidRequirements) * 100);
+        const MINIMUM_PERCENTAGE = 80; // 80% match required
+        
+        console.log(`🔍 ${currentProfile.name} Requirements Summary:`);
+        console.log(`   📊 Total Valid Requirements: ${totalValidRequirements}`);
+        console.log(`   ✅ Fields Matched: ${matchScore}`);
+        console.log(`   📈 Match Percentage: ${matchPercentage}%`);
+        console.log(`   🎯 Required: ${MINIMUM_PERCENTAGE}%`);
+        
+        console.log(`📊 ${p.name} - Score: ${matchScore}/${totalValidRequirements} (${matchPercentage}%)`);
+        console.log(`📋 Matched: [${matchedFields.join(', ')}]`);
+        
+        if (matchPercentage >= MINIMUM_PERCENTAGE) {
+          console.log(`✅ ACCEPTING ${p.name} - ${matchPercentage}% match (Required: ${MINIMUM_PERCENTAGE}%)`);
+          p._tempMatchData = { 
+            matchedFields, 
+            matchScore: `${matchScore}/${totalValidRequirements}`,
+            percentage: matchPercentage
+          };
+          return true;
+        } else {
+          console.log(`❌ REJECTING ${p.name} - Only ${matchPercentage}% match (Required: ${MINIMUM_PERCENTAGE}%)`);
+          return false;
+        }
       });
+      
+      // Add matching data to the final matches
+      matches = matches.map(match => ({
+        ...match.toObject(), // Convert MongoDB document to plain object
+        matchedFields: match._tempMatchData?.matchedFields || [],
+        matchScore: match._tempMatchData?.matchScore || '0/12'
+      }));
       
       console.log(`MongoDB matches found: ${matches.length} for profile ${currentProfile.name}`);
       
