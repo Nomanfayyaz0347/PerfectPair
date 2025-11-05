@@ -23,6 +23,12 @@ interface Profile {
   education: string;
   occupation: string;
   income: string;
+  fatherAlive: boolean;
+  motherAlive: boolean;
+  numberOfBrothers: number;
+  numberOfMarriedBrothers: number;
+  numberOfSisters: number;
+  numberOfMarriedSisters: number;
   familyDetails: string;
   houseType?: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   country?: string;
@@ -347,10 +353,29 @@ export default function AdminDashboard() {
     setEditMessage(null);
   };
 
-  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
     
     if (!editData) return;
+    
+    // Handle checkbox inputs
+    if (type === 'checkbox') {
+      setEditData({
+        ...editData,
+        [name]: checked
+      });
+      return;
+    }
+    
+    // Handle number inputs
+    if (type === 'number') {
+      const numValue = parseInt(value) || 0;
+      setEditData({
+        ...editData,
+        [name]: numValue
+      });
+      return;
+    }
     
     if (name.startsWith('requirements.')) {
       const fieldName = name.split('.')[1] as keyof Profile['requirements'];
@@ -661,6 +686,16 @@ export default function AdminDashboard() {
           </div>
             </div>
           )}
+        </div>
+
+        <div className="flex justify-center mb-6">
+            <Link
+              href="/compare"
+              className="flex items-center justify-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors font-medium text-sm shadow-sm hover:shadow-md"
+            >
+              <span>�</span>
+              <span>Compare Two Profiles</span>
+            </Link>
         </div>
 
         {/* Stats */}
@@ -1349,9 +1384,57 @@ export default function AdminDashboard() {
                   {/* Family Details */}
                   <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
                     <h3 className="text-base sm:text-lg text-gray-800 heading mb-2">👨‍👩‍👧‍👦 Family Details</h3>
-                    <p className="text-xs sm:text-sm text-gray-900 font-light leading-relaxed px-2">
-                      {selectedProfile.familyDetails || 'No family details provided'}
-                    </p>
+                    <div className="space-y-3">
+                      {/* Parents Status */}
+                      <div className="flex flex-wrap gap-3 px-2">
+                        <div className="flex items-center">
+                          <span className={`w-2.5 h-2.5 rounded-full ${selectedProfile.fatherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
+                          <span className="text-xs sm:text-sm text-gray-700 font-light">Father {selectedProfile.fatherAlive ? '(Living)' : '(Deceased)'}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`w-2.5 h-2.5 rounded-full ${selectedProfile.motherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
+                          <span className="text-xs sm:text-sm text-gray-700 font-light">Mother {selectedProfile.motherAlive ? '(Living)' : '(Deceased)'}</span>
+                        </div>
+                      </div>
+
+                      {/* Siblings */}
+                      <div className="grid grid-cols-2 gap-3 px-2">
+                        <div>
+                          <h4 className="text-xs text-gray-600 mb-1">Brothers</h4>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-xs sm:text-sm text-gray-600">Total:</span>
+                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfBrothers}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs sm:text-sm text-gray-600">Married:</span>
+                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfMarriedBrothers}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-xs text-gray-600 mb-1">Sisters</h4>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-xs sm:text-sm text-gray-600">Total:</span>
+                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfSisters}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs sm:text-sm text-gray-600">Married:</span>
+                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfMarriedSisters}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Additional Details */}
+                      <div className="px-2">
+                        <h4 className="text-xs text-gray-600 mb-1">Additional Details</h4>
+                        <p className="text-xs sm:text-sm text-gray-900 font-light leading-relaxed">
+                          {selectedProfile.familyDetails || 'No additional family details provided'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Partner Requirements */}
@@ -1633,7 +1716,7 @@ export default function AdminDashboard() {
             <div className="flex-1 overflow-y-auto overscroll-y-contain webkit-overflow-scrolling-touch modal-scroll p-3 sm:p-6 pb-4 sm:pb-6">
               <EditProfileFormAdmin 
                 editData={editData}
-                handleInputChange={handleEditInputChange}
+                handleInputChange={handleInputChange}
               />
             </div>
             
@@ -2196,16 +2279,111 @@ function EditProfileFormAdmin({
       {/* Family Details */}
       <div>
         <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Family Details</h2>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Family Details *</label>
-          <textarea
-            name="familyDetails"
-            value={editData.familyDetails}
-            onChange={handleInputChange}
-            rows={4}
-            className={textareaClasses}
-            placeholder="Describe your family background, number of siblings, parents occupation, family values etc..."
-          />
+        <div className="space-y-4 sm:space-y-6">
+          {/* Parents Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Father Status</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="fatherAlive"
+                  name="fatherAlive"
+                  checked={editData.fatherAlive}
+                  onChange={handleInputChange}
+                  className="rounded border-gray-300 text-emerald-400 focus:ring-emerald-400/50"
+                />
+                <label htmlFor="fatherAlive" className="text-sm text-gray-600">Father is Living</label>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mother Status</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="motherAlive"
+                  name="motherAlive"
+                  checked={editData.motherAlive}
+                  onChange={handleInputChange}
+                  className="rounded border-gray-300 text-emerald-400 focus:ring-emerald-400/50"
+                />
+                <label htmlFor="motherAlive" className="text-sm text-gray-600">Mother is Living</label>
+              </div>
+            </div>
+          </div>
+
+          {/* Siblings Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Brothers</h3>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Total Brothers</label>
+                  <input
+                    type="number"
+                    name="numberOfBrothers"
+                    value={editData.numberOfBrothers}
+                    onChange={handleInputChange}
+                    min="0"
+                    className={inputClasses}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Married Brothers</label>
+                  <input
+                    type="number"
+                    name="numberOfMarriedBrothers"
+                    value={editData.numberOfMarriedBrothers}
+                    onChange={handleInputChange}
+                    min="0"
+                    max={editData.numberOfBrothers}
+                    className={inputClasses}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Sisters</h3>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Total Sisters</label>
+                  <input
+                    type="number"
+                    name="numberOfSisters"
+                    value={editData.numberOfSisters}
+                    onChange={handleInputChange}
+                    min="0"
+                    className={inputClasses}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Married Sisters</label>
+                  <input
+                    type="number"
+                    name="numberOfMarriedSisters"
+                    value={editData.numberOfMarriedSisters}
+                    onChange={handleInputChange}
+                    min="0"
+                    max={editData.numberOfSisters}
+                    className={inputClasses}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Family Details */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Additional Family Details</label>
+            <textarea
+              name="familyDetails"
+              rows={3}
+              value={editData.familyDetails}
+              onChange={handleInputChange}
+              className={textareaClasses}
+              placeholder="Tell us about additional family background..."
+            />
+          </div>
         </div>
       </div>
 

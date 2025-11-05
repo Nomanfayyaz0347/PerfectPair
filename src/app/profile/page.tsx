@@ -21,6 +21,12 @@ interface Profile {
   education: string;
   occupation: string;
   income: string;
+  fatherAlive: boolean;
+  motherAlive: boolean;
+  numberOfBrothers: number;
+  numberOfMarriedBrothers: number;
+  numberOfSisters: number;
+  numberOfMarriedSisters: number;
   familyDetails: string;
   houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   country: string;
@@ -503,7 +509,51 @@ function ViewProfile({ profile }: { profile: Profile }) {
       {/* Family Details */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">👨‍👩‍👧‍👦 Family Details</h2>
-        <p className="text-gray-700">{profile.familyDetails || 'No family details provided'}</p>
+        <div className="space-y-4">
+          {/* Parents Status */}
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center">
+              <span className={`w-3 h-3 rounded-full ${profile.fatherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
+              <span className="text-gray-700">Father {profile.fatherAlive ? '(Living)' : '(Deceased)'}</span>
+            </div>
+            <div className="flex items-center">
+              <span className={`w-3 h-3 rounded-full ${profile.motherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
+              <span className="text-gray-700">Mother {profile.motherAlive ? '(Living)' : '(Deceased)'}</span>
+            </div>
+          </div>
+
+          {/* Siblings */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Brothers</h3>
+              <div className="flex justify-between text-gray-600">
+                <span>Total Brothers:</span>
+                <span className="font-medium">{profile.numberOfBrothers}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Married Brothers:</span>
+                <span className="font-medium">{profile.numberOfMarriedBrothers}</span>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Sisters</h3>
+              <div className="flex justify-between text-gray-600">
+                <span>Total Sisters:</span>
+                <span className="font-medium">{profile.numberOfSisters}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Married Sisters:</span>
+                <span className="font-medium">{profile.numberOfMarriedSisters}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Family Details */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Additional Details</h3>
+            <p className="text-gray-700">{profile.familyDetails || 'No additional family details provided'}</p>
+          </div>
+        </div>
       </div>
 
       {/* Partner Requirements - Full Width */}

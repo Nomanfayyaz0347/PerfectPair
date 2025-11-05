@@ -38,6 +38,12 @@ interface FormData {
   occupation: string;
   income: string;
   familyDetails: string;
+  fatherAlive: boolean;
+  motherAlive: boolean;
+  numberOfBrothers: number;
+  numberOfMarriedBrothers: number;
+  numberOfSisters: number;
+  numberOfMarriedSisters: number;
   houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   country: string;
   city: string;
@@ -91,6 +97,12 @@ export default function FormPage() {
     photoUrl: '',
     submittedBy: '',
     matchmakerName: '',
+    fatherAlive: true,
+    motherAlive: true,
+    numberOfBrothers: 0,
+    numberOfMarriedBrothers: 0,
+    numberOfSisters: 0,
+    numberOfMarriedSisters: 0,
     requirements: {
       ageRange: { min: 18, max: 35 },
       heightRange: { min: '5.0', max: '6.0' },
@@ -283,6 +295,12 @@ export default function FormPage() {
           contactNumber: '',
           photoUrl: '',
           submittedBy: '',
+          fatherAlive: true,
+          motherAlive: true,
+          numberOfBrothers: 0,
+          numberOfMarriedBrothers: 0,
+          numberOfSisters: 0,
+          numberOfMarriedSisters: 0,
           requirements: {
             ageRange: { min: 18, max: 35 },
             heightRange: { min: '5.0', max: '6.0' },
@@ -985,8 +1003,95 @@ export default function FormPage() {
           <div>
             <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Family & Contact Information</h2>
             <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Parents</label>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="fatherAlive"
+                        checked={formData.fatherAlive}
+                        onChange={(e) => setFormData({...formData, fatherAlive: e.target.checked})}
+                        className="rounded border-gray-300 text-emerald-400 focus:ring-emerald-400/50"
+                      />
+                      <span className="ml-2 text-sm text-gray-600">Father (Living)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="motherAlive"
+                        checked={formData.motherAlive}
+                        onChange={(e) => setFormData({...formData, motherAlive: e.target.checked})}
+                        className="rounded border-gray-300 text-emerald-400 focus:ring-emerald-400/50"
+                      />
+                      <span className="ml-2 text-sm text-gray-600">Mother (Living)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Brothers</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Total Brothers</label>
+                      <input
+                        type="number"
+                        name="numberOfBrothers"
+                        value={formData.numberOfBrothers}
+                        onChange={(e) => setFormData({...formData, numberOfBrothers: parseInt(e.target.value) || 0})}
+                        min="0"
+                        className={inputClasses}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Married Brothers</label>
+                      <input
+                        type="number"
+                        name="numberOfMarriedBrothers"
+                        value={formData.numberOfMarriedBrothers}
+                        onChange={(e) => setFormData({...formData, numberOfMarriedBrothers: parseInt(e.target.value) || 0})}
+                        min="0"
+                        max={formData.numberOfBrothers}
+                        className={inputClasses}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sisters</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Total Sisters</label>
+                      <input
+                        type="number"
+                        name="numberOfSisters"
+                        value={formData.numberOfSisters}
+                        onChange={(e) => setFormData({...formData, numberOfSisters: parseInt(e.target.value) || 0})}
+                        min="0"
+                        className={inputClasses}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Married Sisters</label>
+                      <input
+                        type="number"
+                        name="numberOfMarriedSisters"
+                        value={formData.numberOfMarriedSisters}
+                        onChange={(e) => setFormData({...formData, numberOfMarriedSisters: parseInt(e.target.value) || 0})}
+                        min="0"
+                        max={formData.numberOfSisters}
+                        className={inputClasses}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Family Details</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Additional Family Details</label>
                 <textarea
                   name="familyDetails"
                   rows={3}

@@ -16,6 +16,12 @@ export interface IProfile extends mongoose.Document {
   education: string;
   occupation: string;
   income: string;
+  fatherAlive: boolean;
+  motherAlive: boolean;
+  numberOfBrothers: number;
+  numberOfMarriedBrothers: number;
+  numberOfSisters: number;
+  numberOfMarriedSisters: number;
   familyDetails: string;
   houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   country: string;
@@ -142,6 +148,40 @@ const ProfileSchema = new mongoose.Schema({
     type: String,
     required: false,
     trim: true,
+  },
+  fatherAlive: {
+    type: Boolean,
+    required: true,
+    default: true,
+  },
+  motherAlive: {
+    type: Boolean,
+    required: true,
+    default: true,
+  },
+  numberOfBrothers: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
+  },
+  numberOfMarriedBrothers: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
+  },
+  numberOfSisters: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
+  },
+  numberOfMarriedSisters: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
   },
   familyDetails: {
     type: String,

@@ -21,6 +21,12 @@ interface Profile {
   address: string;
   contactNumber: string;
   photoUrl?: string;
+  fatherAlive: boolean;
+  motherAlive: boolean;
+  numberOfBrothers: number;
+  numberOfMarriedBrothers: number;
+  numberOfSisters: number;
+  numberOfMarriedSisters: number;
   familyDetails: string;
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
   matchedWith?: string;
@@ -731,9 +737,57 @@ _Shared from PerfectPair - Marriage Bureau System_`;
               {/* Family Details */}
               <div className="bg-gray-50 rounded-lg p-2 sm:p-4 border border-gray-200">
                 <h3 className="text-xs sm:text-sm text-gray-800 heading mb-1 sm:mb-3">👨‍👩‍👧‍👦 Family Details</h3>
-                <p className="text-xs sm:text-sm text-gray-900 font-light leading-relaxed border-b border-gray-200 pb-2">
-                  {selectedMatch.familyDetails || 'No family details provided'}
-                </p>
+                <div className="space-y-3">
+                  {/* Parents Status */}
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                    <div className="flex items-center">
+                      <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${selectedMatch.fatherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-1.5`}></span>
+                      <span className="text-xs text-gray-700 font-light">Father {selectedMatch.fatherAlive ? '(Living)' : '(Deceased)'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${selectedMatch.motherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-1.5`}></span>
+                      <span className="text-xs text-gray-700 font-light">Mother {selectedMatch.motherAlive ? '(Living)' : '(Deceased)'}</span>
+                    </div>
+                  </div>
+
+                  {/* Siblings */}
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div>
+                      <h4 className="text-xs text-gray-600">Brothers</h4>
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-600">Total:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedMatch.numberOfBrothers}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-600">Married:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedMatch.numberOfMarriedBrothers}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-xs text-gray-600">Sisters</h4>
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-600">Total:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedMatch.numberOfSisters}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-600">Married:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedMatch.numberOfMarriedSisters}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Details */}
+                  <div>
+                    <h4 className="text-xs text-gray-600">Additional Details</h4>
+                    <p className="text-xs text-gray-900 font-light leading-relaxed mt-1">
+                      {selectedMatch.familyDetails || 'No additional family details provided'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Requirements Section */}
