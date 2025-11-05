@@ -33,7 +33,7 @@ interface ProfileData {
 }
 
 export function syncProfileToMemory(profile: ProfileData) {
-  console.log('Syncing profile to memory:', profile._id, profile.name);
+  // Syncing profile to memory
   
   const profileData = {
     _id: profile._id,
@@ -59,7 +59,7 @@ export function syncProfileToMemory(profile: ProfileData) {
   
   addProfile(profileData);
   syncedProfiles.add(profile._id);
-  console.log('Profile synced successfully:', profile._id);
+  // Profile synced successfully
 }
 
 export function isProfileSynced(profileId: string): boolean {

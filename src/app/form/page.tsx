@@ -43,6 +43,8 @@ interface FormData {
   city: string;
   contactNumber: string;
   photoUrl?: string;
+  submittedBy: 'Main Admin' | 'Partner Matchmaker' | '';
+  matchmakerName?: string;
   requirements: {
     ageRange: { min: number; max: number };
     heightRange: { min: string; max: string };
@@ -62,7 +64,7 @@ interface FormData {
 export default function FormPage() {
   // Improved input styling
   const inputClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light";
-  const selectClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white";
+  const selectClasses = "w-full px-3 py-2.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white";
   const textareaClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light resize-none";
   
   const [formData, setFormData] = useState<FormData>({
@@ -87,6 +89,8 @@ export default function FormPage() {
     city: 'Karachi',
     contactNumber: '',
     photoUrl: '',
+    submittedBy: '',
+    matchmakerName: '',
     requirements: {
       ageRange: { min: 18, max: 35 },
       heightRange: { min: '5.0', max: '6.0' },
@@ -244,8 +248,7 @@ export default function FormPage() {
         ...(photoUrl && { photoUrl })
       };
 
-      console.log('Submitting profile data:', profileData);
-      console.log('Photo URL:', photoUrl);
+      // Submitting profile data
 
       const response = await fetch('/api/profiles', {
         method: 'POST',
@@ -279,6 +282,7 @@ export default function FormPage() {
           city: 'Karachi',
           contactNumber: '',
           photoUrl: '',
+          submittedBy: '',
           requirements: {
             ageRange: { min: 18, max: 35 },
             heightRange: { min: '5.0', max: '6.0' },
@@ -360,6 +364,50 @@ export default function FormPage() {
               {error}
             </div>
           )}
+
+          {/* Profile Submission Info */}
+          <div>
+            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Profile Submission Details</h2>
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              
+              {/* Who is submitting this profile */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <span className="text-blue-500">👤</span> Who is submitting this profile? *
+                </label>
+                <select
+                  name="submittedBy"
+                  required
+                  value={formData.submittedBy}
+                  onChange={handleInputChange}
+                  className={selectClasses}
+                >
+                  <option value="">Select submitter type</option>
+                  <option value="Main Admin">Main Admin (Direct Client)</option>
+                  <option value="Partner Matchmaker">Partner Matchmaker (Sub-client)</option>
+                </select>
+              </div>
+
+              {/* Matchmaker Name - Only show if Partner Matchmaker is selected */}
+              {formData.submittedBy === 'Partner Matchmaker' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <span className="text-green-500">🤝</span> Matchmaker Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="matchmakerName"
+                    required
+                    placeholder="Enter matchmaker's name who referred this client"
+                    value={formData.matchmakerName || ''}
+                    onChange={handleInputChange}
+                    className={inputClasses}
+                  />
+                </div>
+              )}
+              
+            </div>
+          </div>
 
           {/* Mobile-First Personal Information */}
           <div>
@@ -728,6 +776,7 @@ export default function FormPage() {
                   <optgroup label="Undergraduate">
                     <option value="Bachelor">Bachelor&apos;s Degree</option>
                     <option value="BBA">BBA (Business Administration)</option>
+                    <option value="BCom">BCom (Commerce)</option>
                     <option value="BSc">BSc (Science)</option>
                     <option value="BA">BA (Arts)</option>
                     <option value="BE">BE (Engineering)</option>

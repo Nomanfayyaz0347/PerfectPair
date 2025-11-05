@@ -19,8 +19,8 @@ export default function LoginPage() {
     const initializeAdmin = async () => {
       try {
         await fetch('/api/setup', { method: 'POST' });
-      } catch (error) {
-        console.log('Setup initialization failed:', error);
+      } catch {
+        // Setup initialization failed
       }
     };
     
@@ -37,7 +37,7 @@ export default function LoginPage() {
       try {
         await fetch('/api/setup', { method: 'POST' });
       } catch {
-        console.log('Setup endpoint not available, continuing with login');
+        // Setup endpoint not available, continuing with login
       }
 
       const result = await signIn('credentials', {

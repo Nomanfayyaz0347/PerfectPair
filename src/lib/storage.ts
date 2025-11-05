@@ -84,11 +84,9 @@ export class InMemoryStorage {
   }
   
   static async updateProfile(profileId: string, updateData: Partial<StoredProfile>): Promise<StoredProfile | null> {
-    console.log('InMemoryStorage.updateProfile called with:', { profileId, updateData });
     const index = profiles.findIndex(p => p._id === profileId);
     
     if (index === -1) {
-      console.log('Profile not found for update in InMemoryStorage:', profileId);
       return null;
     }
     
@@ -97,21 +95,17 @@ export class InMemoryStorage {
       ...updateData
     };
     
-    console.log('Profile updated successfully in InMemoryStorage:', profiles[index]);
     return profiles[index];
   }
 
   static async deleteProfile(profileId: string): Promise<boolean> {
-    console.log('InMemoryStorage.deleteProfile called with profileId:', profileId);
     const index = profiles.findIndex(p => p._id === profileId);
     
     if (index === -1) {
-      console.log('Profile not found for deletion in InMemoryStorage:', profileId);
       return false;
     }
     
-    const deletedProfile = profiles.splice(index, 1)[0];
-    console.log('Profile deleted successfully from InMemoryStorage:', deletedProfile.name);
+    profiles.splice(index, 1);
     return true;
   }
   
@@ -253,16 +247,12 @@ export class InMemoryStorage {
       const TOTAL_PARTNER_FIELDS = 12;  // All 12 partner requirement fields
       const MINIMUM_MATCHES_REQUIRED = 8;  // At least 8 fields must match for good quality matches
       
-      console.log(`Storage - ${p.name}: Score ${score}/${TOTAL_PARTNER_FIELDS}`);
-      
       if (score >= MINIMUM_MATCHES_REQUIRED) {
-        console.log(`✅ Storage - Accepting ${p.name} (${score}/${TOTAL_PARTNER_FIELDS} fields matched - Required: ${MINIMUM_MATCHES_REQUIRED})`);
         // Add matched fields information to the profile (like MongoDB version)
         p.matchedFields = matchedFields;
         p.matchScore = `${score}/${TOTAL_PARTNER_FIELDS}`;
         return true;
       } else {
-        console.log(`❌ Storage - Rejecting ${p.name} (Only ${score}/${TOTAL_PARTNER_FIELDS} fields matched - Required: ${MINIMUM_MATCHES_REQUIRED})`);
         return false;
       }
     });
@@ -277,29 +267,22 @@ export function getProfiles(): StoredProfile[] {
 }
 
 export function updateProfile(id: string, updatedData: Partial<StoredProfile>): StoredProfile | null {
-  console.log('UpdateProfile called with:', { id, updatedData });
   const index = profiles.findIndex(p => p._id === id);
   
   if (index === -1) {
-    console.log('Profile not found for update:', id);
-    console.log('Available profiles:', profiles.map(p => ({ id: p._id, name: p.name })));
     return null;
   }
   
   profiles[index] = { ...profiles[index], ...updatedData };
-  console.log('Profile updated successfully:', profiles[index]);
   return profiles[index];
 }
 
 export function addProfile(profile: StoredProfile): void {
-  console.log('Adding profile to in-memory storage:', profile._id);
   const existingIndex = profiles.findIndex(p => p._id === profile._id);
   
   if (existingIndex === -1) {
     profiles.push(profile);
-    console.log('Profile added to storage');
   } else {
     profiles[existingIndex] = profile;
-    console.log('Profile updated in storage');
   }
 }

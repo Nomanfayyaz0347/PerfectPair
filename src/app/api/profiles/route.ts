@@ -110,9 +110,11 @@ export async function POST(request: NextRequest) {
         country: body.country || "Pakistan",
         city: body.city || "Karachi",
         contactNumber: body.contactNumber,
-        photoUrl: body.photoUrl || "/images/default-profile.png",
+        photoUrl: body.photoUrl || null,
         status: 'Active',
         sharedCount: 0,
+        submittedBy: body.submittedBy || undefined,
+        matchmakerName: body.matchmakerName || undefined,
         requirements: body.requirements || {
           ageRange: { min: 20, max: 35 },
           heightRange: { min: "5'0\"", max: "6'0\"" },
@@ -409,6 +411,10 @@ export async function GET(request: NextRequest) {
       
       if (searchParams.get('occupation')) {
         filter.occupation = { $regex: searchParams.get('occupation'), $options: 'i' };
+      }
+      
+      if (searchParams.get('submittedBy')) {
+        filter.submittedBy = searchParams.get('submittedBy');
       }
       
       if (!Profile) {

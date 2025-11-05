@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 interface Profile {
@@ -37,6 +37,8 @@ interface Profile {
   matchScore?: string; // Match percentage score
   matchedFields?: string[]; // Fields that matched the requirements
   sharedCount?: number; // Database-tracked shared count
+  submittedBy?: 'Main Admin' | 'Partner Matchmaker';
+  matchmakerName?: string;
   requirements: {
     ageRange: { min: number; max: number };
     heightRange: { min: string; max: string };
@@ -64,6 +66,7 @@ export default function AdminDashboard() {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [profileMatches, setProfileMatches] = useState<Record<string, number>>({});
+  const hasInitialFetch = useRef(false);
   
   // Edit Profile States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -82,7 +85,8 @@ export default function AdminDashboard() {
     ageMin: '',
     ageMax: '',
     education: '',
-    occupation: ''
+    occupation: '',
+    submittedBy: ''
   });
 
   // Helper function to safely get profile ID - handles both MongoDB and in-memory profiles
@@ -101,13 +105,7 @@ export default function AdminDashboard() {
 
 
   const updateProfileStatus = async (profileId: string, status: string, matchedWithId?: string) => {
-    console.log('🚀 updateProfileStatus CALLED with:', { profileId, status, matchedWithId });
-    console.log('🚀 Profile ID type:', typeof profileId);
-    console.log('🚀 Profile ID length:', profileId?.length);
-    console.log('🚀 Profile ID raw:', JSON.stringify(profileId));
-    
     if (!profileId || profileId.trim() === '') {
-      console.log('❌ Invalid profile ID detected');
       alert('Invalid profile ID');
       return;
     }
@@ -119,10 +117,7 @@ export default function AdminDashboard() {
         matchedDate: new Date().toISOString()
       };
       
-      console.log('Request body:', requestBody);
-      
       const apiUrl = `/api/profiles/${encodeURIComponent(profileId)}/status`;
-      console.log('API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'PUT',
@@ -132,17 +127,11 @@ export default function AdminDashboard() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      
-      // Get raw response text first
       const responseText = await response.text();
-      console.log('Raw response:', responseText);
       
       if (response.ok) {
         try {
-          const responseData = responseText ? JSON.parse(responseText) : {};
-          console.log('Profile updated successfully:', responseData);
+          JSON.parse(responseText);
           
           // Refresh profiles to show updated status
           await fetchProfiles();
@@ -153,8 +142,7 @@ export default function AdminDashboard() {
           } else {
             alert(`Profile status updated to ${status} successfully!`);
           }
-        } catch (parseError) {
-          console.error('Failed to parse success response:', parseError);
+        } catch {
           if (status !== 'Active') {
             alert(`Profile status updated to ${status} successfully!\n\nNote: Profile has been removed from matches as status is no longer Active.`);
           } else {
@@ -165,15 +153,12 @@ export default function AdminDashboard() {
       } else {
         try {
           const errorData = responseText ? JSON.parse(responseText) : {};
-          console.error('API Error Response:', errorData);
           alert(`Failed to update profile status: ${errorData.error || 'Unknown error'}`);
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
+        } catch {
           alert(`Failed to update profile status. Server error.`);
         }
       }
     } catch (error) {
-      console.error('Error updating profile status:', error);
       alert(`Error updating profile status: ${error}`);
     }
   };
@@ -190,74 +175,132 @@ export default function AdminDashboard() {
       if (filters.ageMax) queryParams.append('ageMax', filters.ageMax);
       if (filters.education) queryParams.append('education', filters.education);
       if (filters.occupation) queryParams.append('occupation', filters.occupation);
+      if (filters.submittedBy) queryParams.append('submittedBy', filters.submittedBy);
 
       const response = await fetch(`/api/profiles?${queryParams.toString()}`);
       if (response.ok) {
         const data = await response.json();
         const fetchedProfiles = data.profiles || [];
-        console.log('🔍 Fetched profiles sample (first profile):', fetchedProfiles[0]);
-        console.log('🔍 Profile ID structure check:', {
-          hasId: !!fetchedProfiles[0]?.id,
-          hasUnderscoreId: !!fetchedProfiles[0]?._id,
-          idValue: fetchedProfiles[0]?.id,
-          underscoreIdValue: fetchedProfiles[0]?._id,
-          fullProfile: fetchedProfiles[0]
-        });
         setProfiles(fetchedProfiles);
         
-        // Sync MongoDB profiles to in-memory storage for status updates
-        try {
-          const { syncAllProfiles } = await import('@/lib/profileSync');
-          syncAllProfiles(fetchedProfiles);
-        } catch (syncError) {
-          console.log('Profile sync failed:', syncError);
-        }
+        // Skip profile sync for better performance
         
-        // Show profiles immediately, then fetch matches in parallel
-        setLoading(false); // Show profiles first
+        // Show profiles immediately for fast UI
+        setLoading(false);
         
-        // Fetch matches count in parallel for Active profiles
-        const matchCounts: Record<string, number> = {};
-        const matchPromises = fetchedProfiles.map(async (profile: Profile) => {
-          try {
-            const profileId = getProfileId(profile);
-            
-            // Only fetch matches for Active profiles
-            if (profile.status === 'Active' || !profile.status) {
-              const response = await fetch(`/api/profiles/${profileId}/matches`);
-              if (response.ok) {
-                const matchData = await response.json();
-                return { profileId, count: matchData.matches?.length || 0 };
+        // Load match counts in background (only for active profiles)
+        setTimeout(async () => {
+          const matchCounts: Record<string, number> = {};
+          const activeProfiles = fetchedProfiles.filter((p: Profile) => p.status === 'Active' || !p.status);
+          
+          // Process in smaller batches to prevent hanging
+          const batchSize = 3;
+          for (let i = 0; i < activeProfiles.length; i += batchSize) {
+            const batch = activeProfiles.slice(i, i + batchSize);
+            const batchPromises = batch.map(async (profile: Profile) => {
+              try {
+                const profileId = getProfileId(profile);
+                const response = await fetch(`/api/profiles/${profileId}/matches`);
+                if (response.ok) {
+                  const matchData = await response.json();
+                  return { profileId, count: matchData.matches?.length || 0 };
+                }
+                return { profileId, count: 0 };
+              } catch {
+                return { profileId: getProfileId(profile), count: 0 };
               }
+            });
+            
+            const batchResults = await Promise.all(batchPromises);
+            batchResults.forEach(({ profileId, count }) => {
+              matchCounts[profileId] = count;
+            });
+            
+            // Update UI progressively
+            setProfileMatches(prev => ({ ...prev, ...Object.fromEntries(batchResults.map(r => [r.profileId, r.count])) }));
+            
+            // Prevent overwhelming server
+            if (i + batchSize < activeProfiles.length) {
+              await new Promise(resolve => setTimeout(resolve, 200));
             }
-            return { profileId, count: 0 };
-          } catch {
-            return { profileId: getProfileId(profile), count: 0 };
           }
-        });
-
-        // Wait for all match requests to complete in parallel
-        const matchResults = await Promise.all(matchPromises);
-        matchResults.forEach(({ profileId, count }) => {
-          matchCounts[profileId] = count;
-        });
-        setProfileMatches(matchCounts);
+        }, 1000); // Start after 1 second delay
         
       }
-    } catch (error) {
-      console.error('Error fetching profiles:', error);
+    } catch {
       setLoading(false); // Set loading false on error
     }
-  }, [filters]);
+  }, [filters]); // Keep filters dependency for useCallback but don't auto-call
 
   useEffect(() => {
+    // Prevent multiple initial fetches using ref
+    if (hasInitialFetch.current) {
+      return;
+    }
+    
     if (status === 'loading') return;
     if (!session) {
       router.push('/login');
       return;
     }
-    fetchProfiles();
-  }, [session, status, router, fetchProfiles]);
+    
+    // Mark as fetched to prevent re-runs
+    hasInitialFetch.current = true;
+    setLoading(true);
+    
+    fetch('/api/profiles?limit=1000')
+      .then(res => res.json())
+      .then(data => {
+        const profilesArray = data.profiles || data || [];
+        setProfiles(profilesArray);
+        
+        // Show profiles immediately for fast UI
+        setLoading(false);
+        
+        // Load match counts in background (only for active profiles)
+        setTimeout(async () => {
+          const matchCounts: Record<string, number> = {};
+          const activeProfiles = profilesArray.filter((p: Profile) => p.status === 'Active' || !p.status);
+          
+          // Process in smaller batches to prevent hanging
+          const batchSize = 3;
+          for (let i = 0; i < activeProfiles.length; i += batchSize) {
+            const batch = activeProfiles.slice(i, i + batchSize);
+            const batchPromises = batch.map(async (profile: Profile) => {
+              try {
+                const profileId = getProfileId(profile);
+                const matchResponse = await fetch(`/api/profiles/${profileId}/matches`);
+                
+                if (matchResponse.ok) {
+                  const matchData = await matchResponse.json();
+                  return { profileId, count: matchData.matches?.length || 0 };
+                }
+                return { profileId, count: 0 };
+              } catch {
+                return { profileId: getProfileId(profile), count: 0 };
+              }
+            });
+            
+            const batchResults = await Promise.all(batchPromises);
+            batchResults.forEach(({ profileId, count }) => {
+              matchCounts[profileId] = count;
+            });
+            
+            // Update UI progressively
+            setProfileMatches(prev => ({ ...prev, ...Object.fromEntries(batchResults.map(r => [r.profileId, r.count])) }));
+            
+            // Prevent overwhelming server
+            if (i + batchSize < activeProfiles.length) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          }
+        }, 1000); // Start after 1 second delay
+      })
+      .catch(error => {
+        console.error('Error fetching profiles:', error);
+        setLoading(false);
+      });
+  }, [session, status, router]);
 
   const findMatches = async (profileId: string) => {
     setMatchesLoading(true);
@@ -267,8 +310,8 @@ export default function AdminDashboard() {
         const data = await response.json();
         setMatches(data.matches || []);
       }
-    } catch (error) {
-      console.error('Error finding matches:', error);
+    } catch {
+      // Error finding matches
     } finally {
       setMatchesLoading(false);
     }
@@ -289,7 +332,8 @@ export default function AdminDashboard() {
       ageMin: '',
       ageMax: '',
       education: '',
-      occupation: ''
+      occupation: '',
+      submittedBy: ''
     });
     setLoading(true);
     fetchProfiles();
@@ -329,14 +373,14 @@ export default function AdminDashboard() {
             heightRange: { min: min || '5.0', max: max || '6.0' }
           }
         });
-      } else if (fieldName === 'location') {
-        // Handle comma-separated location values
-        const locationArray = value.split(',').map(item => item.trim()).filter(item => item);
+      } else if (['location', 'cast', 'maslak', 'maritalStatus', 'motherTongue', 'belongs', 'houseType'].includes(fieldName)) {
+        // Handle comma-separated array values
+        const arrayValue = value.split(',').map(item => item.trim()).filter(item => item);
         setEditData({
           ...editData,
           requirements: {
             ...editData.requirements,
-            location: locationArray
+            [fieldName]: arrayValue
           }
         });
       } else {
@@ -363,24 +407,29 @@ export default function AdminDashboard() {
     setEditMessage(null);
     
     try {
+      const updatePayload = {
+        profileId: getProfileId(editingProfile),
+        ...editData
+      };
+      
       const response = await fetch('/api/profiles', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          profileId: getProfileId(editingProfile),
-          ...editData
-        })
+        body: JSON.stringify(updatePayload)
       });
 
       const data = await response.json();
       
       if (data.success) {
-        // Update local profiles state
+        // Update local profiles state with proper merge
+        const updatedProfile = { ...editingProfile, ...editData };
+        
         setProfiles(prev => prev.map(p => 
-          getProfileId(p) === getProfileId(editingProfile) ? editData : p
+          getProfileId(p) === getProfileId(editingProfile) ? updatedProfile : p
         ));
+        
         setIsEditingProfile(false);
         setEditMessage({ type: 'success', text: 'Profile updated successfully!' });
         
@@ -393,8 +442,7 @@ export default function AdminDashboard() {
       } else {
         setEditMessage({ type: 'error', text: data.error || 'Failed to update profile' });
       }
-    } catch (error) {
-      console.error('Error updating profile:', error);
+    } catch {
       setEditMessage({ type: 'error', text: 'Error updating profile' });
     } finally {
       setSaving(false);
@@ -444,8 +492,7 @@ export default function AdminDashboard() {
         const errorData = await response.json();
         setEditMessage({ type: 'error', text: errorData.error || 'Failed to delete profile' });
       }
-    } catch (error) {
-      console.error('Error deleting profile:', error);
+    } catch {
       setEditMessage({ type: 'error', text: 'Error deleting profile' });
     } finally {
       setIsDeleting(false);
@@ -456,6 +503,8 @@ export default function AdminDashboard() {
     setShowDeleteConfirm(false);
     setProfileToDelete(null);
   };
+
+
 
   if (status === 'loading') {
     return (
@@ -585,6 +634,16 @@ export default function AdminDashboard() {
               onChange={handleFilterChange}
               className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
             />
+            <select
+              name="submittedBy"
+              value={filters.submittedBy}
+              onChange={handleFilterChange}
+              className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light bg-white"
+            >
+              <option value="">All Submissions</option>
+              <option value="Main Admin">Direct Clients</option>
+              <option value="Partner Matchmaker">Partner Clients</option>
+            </select>
           </div>
           <div className="flex space-x-3">
             <button
@@ -673,7 +732,9 @@ export default function AdminDashboard() {
                             {/* Number badge - show matches count only for Active profiles */}
                             {(profile.status === 'Active' || !profile.status) && (
                               <div className="absolute -top-1 -left-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">{profileMatches[getProfileId(profile)] || 0}</span>
+                                <span className="text-white text-xs font-bold">
+                                  {profileMatches[getProfileId(profile)] || 0}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -733,13 +794,51 @@ export default function AdminDashboard() {
                         {/* Stats - Exact like attachment */}
                         <div className="flex justify-between items-center mb-2 border-b border-gray-100 pb-2">
                           <div>
-                            <span className="text-sm font-medium text-emerald-600">Matches:</span>
-                            <span className="ml-1 text-sm text-gray-900">
+                            <span className="text-xs font-medium text-emerald-600">Matches:</span>
+                            <span className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200">
                               {(profile.status === 'Active' || !profile.status) ? 
-                                `${profileMatches[getProfileId(profile)] || 0} found` : 
-                                'No matches (Inactive)'
+                                <span className="font-medium text-emerald-600">{profileMatches[getProfileId(profile)] || 0}</span> : 
+                                <span className="text-gray-500">Inactive</span>
                               }
                             </span>
+                            <div className="mt-1 flex items-center justify-between px-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-gray-500">Added:</span>
+                                <span className="text-[10px] text-gray-700">
+                                  {profile.createdAt ? (() => {
+                                    try {
+                                      const date = new Date(profile.createdAt);
+                                      if (isNaN(date.getTime())) return '-';
+                                      return date.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      });
+                                    } catch {
+                                      return '-';
+                                    }
+                                  })() : '-'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-gray-500">Time:</span>
+                                <span className="text-[10px] text-gray-700">
+                                  {profile.createdAt ? (() => {
+                                    try {
+                                      const date = new Date(profile.createdAt);
+                                      if (isNaN(date.getTime())) return '-';
+                                      return date.toLocaleTimeString('en-US', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      });
+                                    } catch {
+                                      return '-';
+                                    }
+                                  })() : '-'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-purple-600">Shared:</span>
@@ -748,11 +847,11 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Buttons Row - Three button layout */}
-                        <div className="flex space-x-2 mb-1">
+                        <div className="flex space-x-2.5 mb-2">
                           {/* View Details Button */}
                           <button
                             onClick={() => setSelectedProfile(profile)}
-                            className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-medium py-2 rounded-md transition-colors border border-emerald-200"
+                            className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-medium py-2.5 rounded-md transition-colors border border-emerald-200"
                           >
                             View
                           </button>
@@ -760,7 +859,7 @@ export default function AdminDashboard() {
                           {/* Edit Profile Button */}
                           <button
                             onClick={() => handleEditProfile(profile)}
-                            className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium py-2 rounded-md transition-colors border border-blue-200"
+                            className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium py-2.5 rounded-md transition-colors border border-blue-200"
                           >
                             Edit
                           </button>
@@ -768,35 +867,67 @@ export default function AdminDashboard() {
                           {/* View All Matches Button */}
                           <Link
                             href={`/matches?id=${getProfileId(profile)}&name=${encodeURIComponent(profile.name)}`}
-                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium py-2 text-center transition-colors rounded-md"
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold py-2.5 text-center transition-colors rounded-md shadow-sm"
                           >
                             Matches
                           </Link>
                         </div>
 
-                        {/* Status Dropdown - Moved to bottom */}
-                        <div>
-                          <label className="block text-sm text-gray-600 mb-2">
-                            {(profile.status && profile.status !== 'Active') ? 'Change Status' : 'Change Status:'}
-                          </label>
-                          <select 
-                            value={profile.status || 'Active'}
-                            onChange={(e) => {
-                              const newStatus = e.target.value as 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
-                              if (newStatus !== (profile.status || 'Active')) {
-                                updateProfileStatus(getProfileId(profile), newStatus);
-                              }
-                            }}
-                            className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 bg-white ${
-                              (profile.status && profile.status !== 'Active') ? 'cursor-pointer' : ''
-                            }`}
-                          >
-                            <option value="Active">🟢 Active</option>
-                            <option value="Matched">🔵 Matched</option>
-                            <option value="Engaged">🟣 Engaged</option>
-                            <option value="Married">💍 Married</option>
-                            <option value="Inactive">⚫ Inactive</option>
-                          </select>
+                        {/* Status & Badge Row - 35-65 split */}
+                        <div className="flex gap-3 items-stretch">
+                          {/* Status Dropdown - 35% */}
+                          <div className="w-[35%]">
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Status
+                            </label>
+                            <select 
+                              value={profile.status || 'Active'}
+                              onChange={(e) => {
+                                const newStatus = e.target.value as 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
+                                if (newStatus !== (profile.status || 'Active')) {
+                                  updateProfileStatus(getProfileId(profile), newStatus);
+                                }
+                              }}
+                              className={`w-full px-2 py-1.5 text-xs border border-gray-200 rounded focus:ring-emerald-500 focus:border-emerald-500 bg-white ${
+                                (profile.status && profile.status !== 'Active') ? 'cursor-pointer' : ''
+                              }`}
+                            >
+                              <option value="Active">🟢 Active</option>
+                              <option value="Matched">🔵 Matched</option>
+                              <option value="Engaged">🟣 Engaged</option>
+                              <option value="Married">💍 Married</option>
+                              <option value="Inactive">⚫ Inactive</option>
+                            </select>
+                          </div>
+
+                          {/* Submitted By - 65% */}
+                          <div className="w-[65%]">
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Submitted By
+                            </label>
+                            <div className="w-full bg-gray-50 rounded px-2 py-1.5 border border-gray-200 min-h-[27px] flex items-center">
+                              {profile.submittedBy ? (
+                                <div className="flex items-center gap-2 w-full overflow-hidden">
+                                  <span className={`inline-flex items-center shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                    profile.submittedBy === 'Main Admin' 
+                                      ? 'bg-blue-50 text-blue-700' 
+                                      : 'bg-green-50 text-green-700'
+                                  }`}>
+                                    {profile.submittedBy === 'Main Admin' ? '👤 Direct' : '🤝 Partner'}
+                                  </span>
+                                  {profile.submittedBy === 'Partner Matchmaker' && profile.matchmakerName && (
+                                    <span className="text-[11px] text-gray-500 truncate">
+                                      {profile.matchmakerName}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-gray-50 text-gray-600">
+                                  ❓ Not specified
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -928,12 +1059,7 @@ export default function AdminDashboard() {
                               const newStatus = e.target.value as 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
                               if (newStatus !== (profile.status || 'Active')) {
                                 const profileId = getProfileId(profile);
-                                console.log('🔥 DESKTOP Status dropdown changed:', { 
-                                  profileId, 
-                                  profileObject: profile,
-                                  from: profile.status || 'Active', 
-                                  to: newStatus 
-                                });
+
                                 updateProfileStatus(profileId, newStatus);
                               }
                             }}
@@ -989,8 +1115,20 @@ export default function AdminDashboard() {
                   <div>
                     <div className="flex items-center space-x-2">
                       <h2 className="text-lg sm:text-xl text-gray-900 heading">{selectedProfile.name}</h2>
+                      {selectedProfile.submittedBy && (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedProfile.submittedBy === 'Main Admin' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {selectedProfile.submittedBy === 'Main Admin' ? '👤 Direct' : '🤝 Partner'}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 font-light">{selectedProfile.age} years • {selectedProfile.occupation}</p>
+                    {selectedProfile.submittedBy === 'Partner Matchmaker' && selectedProfile.matchmakerName && (
+                      <p className="text-xs text-green-600 font-medium">Referred by: {selectedProfile.matchmakerName}</p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -1470,6 +1608,7 @@ export default function AdminDashboard() {
                     Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={handleSaveProfile}
                     disabled={saving}
                     className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-3 py-1.5 rounded-md transition-all font-light shadow-sm hover:shadow-md disabled:opacity-50 text-xs"
@@ -1581,6 +1720,50 @@ function EditProfileFormAdmin({
 
   return (
     <div className="space-y-6">
+      {/* Profile Submission Details */}
+      <div>
+        <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Profile Submission Details</h2>
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
+          
+          {/* Submission Type - 50/50 Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <span className="text-blue-500">👤</span> Submitted By
+              </label>
+              <select
+                name="submittedBy"
+                value={editData.submittedBy || ''}
+                onChange={handleInputChange}
+                className={selectClasses}
+              >
+                <option value="">Not Specified</option>
+                <option value="Main Admin">Main Admin (Direct Client)</option>
+                <option value="Partner Matchmaker">Partner Matchmaker</option>
+              </select>
+            </div>
+
+            {/* Matchmaker Name - Only show if Partner Matchmaker is selected */}
+            {editData.submittedBy === 'Partner Matchmaker' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <span className="text-green-500">🤝</span> Matchmaker Name
+                </label>
+                <input
+                  type="text"
+                  name="matchmakerName"
+                  value={editData.matchmakerName || ''}
+                  onChange={handleInputChange}
+                  className={inputClasses}
+                  placeholder="Enter matchmaker's name"
+                />
+              </div>
+            )}
+          </div>
+          
+        </div>
+      </div>
+
       {/* Personal Information */}
       <div>
         <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Personal Information</h2>
@@ -1624,14 +1807,53 @@ function EditProfileFormAdmin({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Cast/Caste *</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cast *</label>
+              <select
                 name="cast"
                 value={editData.cast}
                 onChange={handleInputChange}
-                className={inputClasses}
-              />
+                className={selectClasses}
+              >
+                <option value="">Select Cast</option>
+                {/* Major Casts */}
+                <optgroup label="Major Casts">
+                  <option value="Rajput">Rajput</option>
+                  <option value="Jat">Jat</option>
+                  <option value="Gujjar">Gujjar</option>
+                  <option value="Awan">Awan</option>
+                  <option value="Arain">Arain</option>
+                  <option value="Sheikh">Sheikh</option>
+                  <option value="Malik">Malik</option>
+                  <option value="Chaudhary">Chaudhary</option>
+                </optgroup>
+                
+                {/* Religious/Tribal */}
+                <optgroup label="Religious/Tribal">
+                  <option value="Syed">Syed</option>
+                  <option value="Qureshi">Qureshi</option>
+                  <option value="Ansari">Ansari</option>
+                  <option value="Mughal">Mughal</option>
+                  <option value="Pathan">Pathan</option>
+                  <option value="Baloch">Baloch</option>
+                </optgroup>
+                
+                {/* Professional/Occupational */}
+                <optgroup label="Professional">
+                  <option value="Butt">Butt</option>
+                  <option value="Dar">Dar</option>
+                  <option value="Lone">Lone</option>
+                  <option value="Khan">Khan</option>
+                  <option value="Khatri">Khatri</option>
+                </optgroup>
+                
+                {/* Others */}
+                <optgroup label="Others">
+                  <option value="Kashmiri">Kashmiri</option>
+                  <option value="Punjabi">Punjabi</option>
+                  <option value="Sindhi">Sindhi</option>
+                  <option value="Other">Other</option>
+                </optgroup>
+              </select>
             </div>
           </div>
 
@@ -1693,15 +1915,59 @@ function EditProfileFormAdmin({
           {/* Maslak and Marital Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Maslak *</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-2">Maslak (Religious Sect) *</label>
+              <select
                 name="maslak"
                 value={editData.maslak || ''}
                 onChange={handleInputChange}
-                className={inputClasses}
-                placeholder="e.g., Sunni, Shia, Hanafi"
-              />
+                className={selectClasses}
+              >
+                <option value="">Select Maslak</option>
+                
+                {/* Sunni Maslak */}
+                <optgroup label="Sunni Islam">
+                  <option value="Hanafi">Hanafi</option>
+                  <option value="Shafi'i">Shafi&apos;i</option>
+                  <option value="Maliki">Maliki</option>
+                  <option value="Hanbali">Hanbali</option>
+                  <option value="Ahle Hadith">Ahle Hadith (Salafi)</option>
+                  <option value="Deobandi">Deobandi</option>
+                  <option value="Barelvi">Barelvi</option>
+                  <option value="Jamaat-e-Islami">Jamaat-e-Islami</option>
+                </optgroup>
+                
+                {/* Shia Maslak */}
+                <optgroup label="Shia Islam">
+                  <option value="Twelver Shia">Twelver Shia (Ithna Ashariyya)</option>
+                  <option value="Ismaili">Ismaili</option>
+                  <option value="Zaidi">Zaidi</option>
+                  <option value="Alavi Bohra">Alavi Bohra</option>
+                  <option value="Dawoodi Bohra">Dawoodi Bohra</option>
+                </optgroup>
+                
+                {/* Sufi Orders */}
+                <optgroup label="Sufi Orders">
+                  <option value="Chishti">Chishti</option>
+                  <option value="Qadri">Qadri</option>
+                  <option value="Naqshbandi">Naqshbandi</option>
+                  <option value="Suhrawardi">Suhrawardi</option>
+                </optgroup>
+                
+                {/* Other Islamic Sects */}
+                <optgroup label="Other Islamic Sects">
+                  <option value="Ahmadiyya">Ahmadiyya</option>
+                  <option value="Quranist">Quranist</option>
+                  <option value="Non-denominational">Non-denominational Muslim</option>
+                </optgroup>
+                
+                {/* Non-Muslim Options */}
+                <optgroup label="Other Religions">
+                  <option value="Christian">Christian</option>
+                  <option value="Hindu">Hindu</option>
+                  <option value="Sikh">Sikh</option>
+                  <option value="Other Religion">Other Religion</option>
+                </optgroup>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marital Status *</label>
@@ -1723,25 +1989,51 @@ function EditProfileFormAdmin({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Mother Tongue *</label>
-              <input
-                type="text"
+              <select
                 name="motherTongue"
                 value={editData.motherTongue || ''}
                 onChange={handleInputChange}
-                className={inputClasses}
-                placeholder="e.g., Urdu, English, Punjabi"
-              />
+                className={selectClasses}
+              >
+                <option value="">Select Language</option>
+                <option value="Urdu">Urdu</option>
+                <option value="English">English</option>
+                <option value="Punjabi">Punjabi</option>
+                <option value="Sindhi">Sindhi</option>
+                <option value="Pashto">Pashto</option>
+                <option value="Balochi">Balochi</option>
+                <option value="Saraiki">Saraiki</option>
+                <option value="Hindko">Hindko</option>
+                <option value="Kashmiri">Kashmiri</option>
+                <option value="Arabic">Arabic</option>
+                <option value="Persian">Persian</option>
+                <option value="Turkish">Turkish</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nationality/Origin *</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-2">Belongs *</label>
+              <select
                 name="belongs"
                 value={editData.belongs || ''}
                 onChange={handleInputChange}
-                className={inputClasses}
-                placeholder="e.g., Pakistan, Bangladesh"
-              />
+                className={selectClasses}
+              >
+                <option value="">Select Country</option>
+                <option value="Pakistan">Pakistan</option>
+                <option value="Bangladesh">Bangladesh</option>
+                <option value="India">India</option>
+                <option value="Afghanistan">Afghanistan</option>
+                <option value="Iran">Iran</option>
+                <option value="Turkey">Turkey</option>
+                <option value="Saudi Arabia">Saudi Arabia</option>
+                <option value="UAE">UAE</option>
+                <option value="UK">UK</option>
+                <option value="USA">USA</option>
+                <option value="Canada">Canada</option>
+                <option value="Australia">Australia</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           </div>
 
@@ -1847,10 +2139,9 @@ function EditProfileFormAdmin({
               onChange={handleInputChange}
               className={selectClasses}
             >
-              <option value="">Select House Type</option>
+              <option value="Family House">Family House</option>
               <option value="Own House">Own House</option>
               <option value="Rent">Rent</option>
-              <option value="Family House">Family House</option>
               <option value="Apartment">Apartment</option>
             </select>
           </div>
@@ -2042,8 +2333,158 @@ function EditProfileFormAdmin({
               />
             </div>
 
+            {/* Cast Preference */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <span className="text-pink-500">👥</span>
+                Cast Preference (comma separated)
+              </label>
+              <input
+                type="text"
+                name="requirements.cast"
+                value={Array.isArray(editData.requirements.cast) ? editData.requirements.cast.join(', ') : editData.requirements.cast || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const castArray = value.split(',').map(item => item.trim()).filter(item => item);
+                  handleInputChange({
+                    target: {
+                      name: 'requirements.cast',
+                      value: castArray.join(', ')
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                placeholder="Same Cast, Any, Rajput, Shaikh"
+                className={inputClasses}
+              />
+            </div>
+
+            {/* Maslak Preference */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <span className="text-pink-500">🕌</span>
+                Maslak Preference (comma separated)
+              </label>
+              <input
+                type="text"
+                name="requirements.maslak"
+                value={Array.isArray(editData.requirements.maslak) ? editData.requirements.maslak.join(', ') : editData.requirements.maslak || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const maslakArray = value.split(',').map(item => item.trim()).filter(item => item);
+                  handleInputChange({
+                    target: {
+                      name: 'requirements.maslak',
+                      value: maslakArray.join(', ')
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                placeholder="Sunni, Shia, Any"
+                className={inputClasses}
+              />
+            </div>
+
+            {/* Marital Status Preference */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <span className="text-pink-500">💍</span>
+                Preferred Marital Status (comma separated)
+              </label>
+              <input
+                type="text"
+                name="requirements.maritalStatus"
+                value={Array.isArray(editData.requirements.maritalStatus) ? editData.requirements.maritalStatus.join(', ') : editData.requirements.maritalStatus || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const statusArray = value.split(',').map(item => item.trim()).filter(item => item);
+                  handleInputChange({
+                    target: {
+                      name: 'requirements.maritalStatus',
+                      value: statusArray.join(', ')
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                placeholder="Single, Divorced, Widowed"
+                className={inputClasses}
+              />
+            </div>
+
+            {/* Mother Tongue Preference */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <span className="text-pink-500">�️</span>
+                Mother Tongue Preference (comma separated)
+              </label>
+              <input
+                type="text"
+                name="requirements.motherTongue"
+                value={Array.isArray(editData.requirements.motherTongue) ? editData.requirements.motherTongue.join(', ') : editData.requirements.motherTongue || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const tongueArray = value.split(',').map(item => item.trim()).filter(item => item);
+                  handleInputChange({
+                    target: {
+                      name: 'requirements.motherTongue',
+                      value: tongueArray.join(', ')
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                placeholder="Urdu, English, Punjabi"
+                className={inputClasses}
+              />
+            </div>
+
+            {/* Nationality/Origin Preference */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <span className="text-pink-500">🌍</span>
+                Nationality/Origin Preference (comma separated)
+              </label>
+              <input
+                type="text"
+                name="requirements.belongs"
+                value={Array.isArray(editData.requirements.belongs) ? editData.requirements.belongs.join(', ') : editData.requirements.belongs || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const belongsArray = value.split(',').map(item => item.trim()).filter(item => item);
+                  handleInputChange({
+                    target: {
+                      name: 'requirements.belongs',
+                      value: belongsArray.join(', ')
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                placeholder="Pakistan, Bangladesh, Any"
+                className={inputClasses}
+              />
+            </div>
+
+            {/* House Type Preference */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <span className="text-pink-500">🏡</span>
+                House Type Preference (comma separated)
+              </label>
+              <input
+                type="text"
+                name="requirements.houseType"
+                value={Array.isArray(editData.requirements.houseType) ? editData.requirements.houseType.join(', ') : editData.requirements.houseType || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const houseArray = value.split(',').map(item => item.trim()).filter(item => item);
+                  handleInputChange({
+                    target: {
+                      name: 'requirements.houseType',
+                      value: houseArray.join(', ')
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }}
+                placeholder="Own House, Rent, Any"
+                className={inputClasses}
+              />
+            </div>
+
             <p className="text-sm text-gray-600 bg-white/80 p-3 rounded-lg">
-              💡 <strong>Tip:</strong> For multiple preferences (cast, maslak, etc.), separate with commas. Example: &quot;Same Cast, Any&quot;
+              💡 <strong>Tip:</strong> For multiple preferences, separate with commas. Example: &quot;Single, Divorced&quot; or &quot;Same Cast, Any&quot;
             </p>
           </div>
         </div>

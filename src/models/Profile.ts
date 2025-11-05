@@ -26,6 +26,8 @@ export interface IProfile extends mongoose.Document {
   matchedWith?: string;
   matchedDate?: Date;
   sharedCount: number;
+  submittedBy?: 'Main Admin' | 'Partner Matchmaker';
+  matchmakerName?: string;
   requirements: {
     ageRange: {
       min: number;
@@ -170,6 +172,17 @@ const ProfileSchema = new mongoose.Schema({
     trim: true,
   },
   photoUrl: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  submittedBy: {
+    type: String,
+    required: false,
+    enum: ['Main Admin', 'Partner Matchmaker'],
+    trim: true,
+  },
+  matchmakerName: {
     type: String,
     required: false,
     trim: true,

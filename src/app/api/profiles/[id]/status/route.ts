@@ -9,7 +9,7 @@ export async function PUT(
   
   console.log('=== STATUS UPDATE API START ===');
   console.log('Profile ID from params:', profileId);
-  console.log('Params object:', params);
+  console.log('Params object:', resolvedParams);
   console.log('Request URL:', request.url);
   
   if (!profileId || profileId.trim() === '' || profileId === 'undefined') {

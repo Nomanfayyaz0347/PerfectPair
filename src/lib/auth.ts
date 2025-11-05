@@ -11,16 +11,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        console.log('🔐 Authorization attempt started');
-        console.log('Environment check:', {
-          hasSecret: !!process.env.NEXTAUTH_SECRET,
-          hasUrl: !!process.env.NEXTAUTH_URL,
-          hasAdminEmail: !!process.env.ADMIN_EMAIL,
-          hasAdminPassword: !!process.env.ADMIN_PASSWORD
-        });
-
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing credentials');
           return null;
         }
 
@@ -29,15 +20,7 @@ export const authOptions: NextAuthOptions = {
           const defaultEmail = process.env.ADMIN_EMAIL || 'admin@matchmaker.com';
           const defaultPassword = process.env.ADMIN_PASSWORD || 'securepassword';
           
-          console.log('Auth attempt:', { 
-            inputEmail: credentials.email, 
-            defaultEmail, 
-            inputPassword: credentials.password?.slice(0,3) + '***',
-            defaultPassword: defaultPassword?.slice(0,3) + '***'
-          });
-          
           if (credentials.email === defaultEmail && credentials.password === defaultPassword) {
-            console.log('Default admin login successful');
             return {
               id: 'admin-1',
               email: defaultEmail,
@@ -66,7 +49,7 @@ export const authOptions: NextAuthOptions = {
               }
             }
           } catch {
-            console.log('Database connection failed during auth, using default admin only');
+
           }
           
           return null;

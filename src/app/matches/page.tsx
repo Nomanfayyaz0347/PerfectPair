@@ -71,13 +71,12 @@ function MatchesPageContent() {
       const matchesResponse = await fetch(`/api/profiles/${profileId}/matches`);
       if (matchesResponse.ok) {
         const matchesData = await matchesResponse.json();
-        console.log('🔍 Raw matches from API:', matchesData);
         
         // Use matches directly from API without forcing fallback data
         setMatches(matchesData.matches || []);
       }
-    } catch (error) {
-      console.error('Error fetching matches:', error);
+    } catch {
+      // Error fetching matches
     } finally {
       setLoading(false);
     }
@@ -129,15 +128,11 @@ _Shared from PerfectPair - Marriage Bureau System_`;
         });
         
         if (response.ok) {
-          const result = await response.json();
-          console.log('✅ Share count updated:', result.sharedCount);
           // Refresh the profile to get updated count
           fetchMatches();
-        } else {
-          console.error('❌ Failed to update share count');
         }
-      } catch (error) {
-        console.error('❌ Error updating share count:', error);
+      } catch {
+        // Error updating share count
       }
     }
     
@@ -183,14 +178,12 @@ _Shared from PerfectPair - Marriage Bureau System_`;
         const responses = await Promise.all(sharePromises);
         const successCount = responses.filter(r => r.ok).length;
         
-        console.log(`✅ Bulk share: ${successCount}/${matches.length} counts updated`);
-        
         // Refresh the profile to get updated count
         if (successCount > 0) {
           fetchMatches();
         }
-      } catch (error) {
-        console.error('❌ Error updating bulk share count:', error);
+      } catch {
+        // Error updating bulk share count
       }
     }
     

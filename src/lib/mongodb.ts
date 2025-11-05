@@ -4,7 +4,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   console.error('⚠️  MONGODB_URI environment variable is not defined');
-  console.log('Fallback to in-memory storage will be used');
+
 }
 
 /**
@@ -25,7 +25,7 @@ async function dbConnect() {
   }
 
   if (cached.conn) {
-    console.log('✅ Using existing MongoDB connection');
+
     return cached.conn;
   }
 
@@ -37,7 +37,7 @@ async function dbConnect() {
       socketTimeoutMS: 45000,
     };
 
-    console.log('🔄 Creating new MongoDB connection...');
+
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
       return mongoose.connection;
     });
@@ -45,7 +45,7 @@ async function dbConnect() {
 
   try {
     cached.conn = await cached.promise;
-    console.log('✅ MongoDB connected successfully');
+
     return cached.conn;
   } catch (e) {
     cached.promise = null;
