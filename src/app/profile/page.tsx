@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import useSWR from 'swr';
 
 interface Profile {
   _id: string;
@@ -54,10 +55,25 @@ function ProfilePageContent() {
   const searchParams = useSearchParams();
   const profileId = searchParams.get('id');
   
-  const [profile, setProfile] = useState<Profile | null>(null);
+  // SWR fetcher
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+  
+  // Use SWR for profile data
+  const { data: profileData, mutate: refreshProfile } = useSWR(
+    profileId ? `/api/profiles?id=${profileId}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30000, // Cache for 30 seconds
+    }
+  );
+  
+  const profile = profileData?.profiles?.[0] || null;
+  const loading = !profileData && profileId !== null;
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -68,29 +84,10 @@ function ProfilePageContent() {
   const textareaClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 font-light resize-none";
 
   useEffect(() => {
-    if (profileId) {
-      fetchProfile();
+    if (profile && !editData) {
+      setEditData(profile);
     }
-  }, [profileId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch(`/api/profiles?id=${profileId}`);
-      const data = await response.json();
-      
-      if (data.profiles && data.profiles.length > 0) {
-        setProfile(data.profiles[0]);
-        setEditData(data.profiles[0]);
-      } else {
-        setMessage({ type: 'error', text: 'Profile not found' });
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setMessage({ type: 'error', text: 'Error fetching profile' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [profile, editData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -156,7 +153,7 @@ function ProfilePageContent() {
       const data = await response.json();
       
       if (data.success) {
-        setProfile(editData);
+        await refreshProfile(); // Refresh from server
         setIsEditing(false);
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
       } else {

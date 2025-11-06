@@ -271,6 +271,10 @@ export default function FormPage() {
       });
 
       if (response.ok) {
+        // Clear match counts cache so fresh data loads on admin page
+        localStorage.removeItem('profileMatchCounts');
+        localStorage.removeItem('profileMatchCounts_timestamp');
+        
         setSuccess(true);
         setFormData({
           name: '',

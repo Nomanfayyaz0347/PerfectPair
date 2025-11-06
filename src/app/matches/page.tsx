@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import useSWR from 'swr';
 
 interface Profile {
   _id: string;
@@ -53,40 +54,42 @@ function MatchesPageContent() {
   const profileId = searchParams.get('id');
   const profileName = searchParams.get('name');
 
-  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
-  const [matches, setMatches] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  // SWR fetcher function
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+  // Use SWR for current profile
+  const { data: profileData } = useSWR(
+    profileId ? `/api/profiles?id=${profileId}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30000, // Cache for 30 seconds
+    }
+  );
+
+  // Use SWR for matches with caching
+  const { data: matchesData, mutate: refreshMatches } = useSWR(
+    profileId ? `/api/profiles/${profileId}/matches` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30000, // Cache for 30 seconds
+    }
+  );
+
+  const currentProfile = profileData?.profiles?.[0] || null;
+  const matches = matchesData?.matches || [];
+  const loading = !matchesData && !profileData;
+
   const [selectedMatch, setSelectedMatch] = useState<Profile | null>(null);
   const [showAllMatches, setShowAllMatches] = useState(false);
 
   const fetchMatches = useCallback(async () => {
-    if (!profileId) return;
-    
-    setLoading(true);
-    try {
-      // Fetch current profile details
-      const profileResponse = await fetch(`/api/profiles?id=${profileId}`);
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json();
-        if (profileData.profiles && profileData.profiles.length > 0) {
-          setCurrentProfile(profileData.profiles[0]);
-        }
-      }
-
-      // Fetch matches
-      const matchesResponse = await fetch(`/api/profiles/${profileId}/matches`);
-      if (matchesResponse.ok) {
-        const matchesData = await matchesResponse.json();
-        
-        // Use matches directly from API without forcing fallback data
-        setMatches(matchesData.matches || []);
-      }
-    } catch {
-      // Error fetching matches
-    } finally {
-      setLoading(false);
-    }
-  }, [profileId]);
+    // Use SWR's mutate to refresh data
+    await refreshMatches();
+  }, [refreshMatches]);
 
   const shareOnWhatsApp = async (profile: Profile) => {
     const message = `🌟 *Perfect Match Found!* 🌟
@@ -150,7 +153,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
 
     const message = `🌟 *${matches.length} Perfect Matches Found for ${profileName || currentProfile?.name}!* 🌟
 
-${matches.map((match, index) => `
+${matches.map((match: Profile, index: number) => `
 *${index + 1}. ${match.name}*
 👨‍👧 Father: ${match.fatherName}
 👫 Gender: ${match.gender}
@@ -341,7 +344,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                     <div className="bg-blue-50 border border-blue-100 rounded p-1.5 sm:p-2">
                       <div className="text-xs text-blue-600 font-medium mb-1 sm:mb-2">Found Matches:</div>
                       <div className="space-y-1 sm:space-y-2">
-                        {(showAllMatches ? matches : matches.slice(0, 3)).map((match, index) => {
+                        {(showAllMatches ? matches : matches.slice(0, 3)).map((match: Profile, index: number) => {
                           return (
                             <div key={match._id} className="bg-white border border-blue-200 rounded p-1 sm:p-1.5">
                               <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs mb-0.5 sm:mb-1">
@@ -368,7 +371,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                                       ✅ Matched Fields ({match.matchedFields.length}):
                                     </div>
                                     <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                                      {match.matchedFields.map((field, fieldIndex) => {
+                                      {match.matchedFields.map((field: string, fieldIndex: number) => {
                                         // Add appropriate icons for different field types
                                         const getFieldIcon = (fieldName: string) => {
                                           if (fieldName.includes('Age')) return '🎂';
@@ -454,7 +457,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
               </div>
             ) : (
               <div className="space-y-3">
-                {matches.map((match) => (
+                {matches.map((match: Profile) => (
                   <div 
                     key={match._id} 
                     className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${(match.status && match.status !== 'Active') ? 'opacity-40' : 'opacity-100'}`}
@@ -559,7 +562,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                               ✅ Matching Fields ({match.matchedFields.length}):
                             </div>
                             <div className="flex flex-wrap gap-1 sm:gap-1.5">
-                              {match.matchedFields.map((field, fieldIndex) => {
+                              {match.matchedFields.map((field: string, fieldIndex: number) => {
                                 // Add appropriate icons for different field types
                                 const getFieldIcon = (fieldName: string) => {
                                   if (fieldName.includes('Age')) return '🎂';
@@ -839,7 +842,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                       <div className="border-b border-blue-200 pb-1">
                         <div className="text-xs sm:text-sm text-blue-600 heading mb-1">Matched Fields ({selectedMatch.matchedFields.length}):</div>
                         <div className="flex flex-wrap gap-1">
-                          {selectedMatch.matchedFields.map((field, index) => (
+                          {selectedMatch.matchedFields.map((field: string, index: number) => (
                             <span key={index} className="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs border border-blue-200 font-medium">
                               {field}
                             </span>

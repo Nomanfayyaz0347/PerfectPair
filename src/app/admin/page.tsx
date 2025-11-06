@@ -2,8 +2,9 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
 
 interface Profile {
   _id: string;
@@ -65,14 +66,67 @@ interface Profile {
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // SWR fetcher function
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+  
+  // Use SWR for profiles with caching
+  const { data: profilesData, error: profilesError, mutate: refreshProfiles } = useSWR(
+    session ? '/api/profiles?limit=1000' : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,    // Don't reload when tab changes
+      revalidateOnReconnect: false, // Don't reload on reconnect
+      refreshInterval: 0,           // No auto refresh
+      dedupingInterval: 60000,      // Cache for 60 seconds
+    }
+  );
+  
+  const profiles = useMemo(() => {
+    return profilesData?.profiles || profilesData || [];
+  }, [profilesData]);
+  
+  const loading = !profilesData && !profilesError;
+  
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [matches, setMatches] = useState<Profile[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [profileMatches, setProfileMatches] = useState<Record<string, number>>({});
-  const hasInitialFetch = useRef(false);
+  
+  // Cache match counts - persist in localStorage with expiry
+  const [profileMatches, setProfileMatches] = useState<Record<string, number>>(() => {
+    // Load from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('profileMatchCounts');
+      const cacheTime = localStorage.getItem('profileMatchCounts_timestamp');
+      
+      if (cached && cacheTime) {
+        try {
+          const timestamp = parseInt(cacheTime);
+          const now = Date.now();
+          // Cache valid for 30 seconds - shorter to catch new matches faster
+          if (now - timestamp < 30 * 1000) {
+            return JSON.parse(cached);
+          } else {
+            // Cache expired, clear it
+            localStorage.removeItem('profileMatchCounts');
+            localStorage.removeItem('profileMatchCounts_timestamp');
+          }
+        } catch {
+          return {};
+        }
+      }
+    }
+    return {};
+  });
+  
+  // Save to localStorage whenever profileMatches changes
+  useEffect(() => {
+    if (Object.keys(profileMatches).length > 0) {
+      localStorage.setItem('profileMatchCounts', JSON.stringify(profileMatches));
+      localStorage.setItem('profileMatchCounts_timestamp', Date.now().toString());
+    }
+  }, [profileMatches]);
   
   // Edit Profile States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -139,6 +193,11 @@ export default function AdminDashboard() {
         try {
           JSON.parse(responseText);
           
+          // Clear match counts cache when status changes
+          setProfileMatches({});
+          localStorage.removeItem('profileMatchCounts');
+          localStorage.removeItem('profileMatchCounts_timestamp');
+          
           // Refresh profiles to show updated status
           await fetchProfiles();
           
@@ -149,6 +208,11 @@ export default function AdminDashboard() {
             alert(`Profile status updated to ${status} successfully!`);
           }
         } catch {
+          // Clear match counts cache
+          setProfileMatches({});
+          localStorage.removeItem('profileMatchCounts');
+          localStorage.removeItem('profileMatchCounts_timestamp');
+          
           if (status !== 'Active') {
             alert(`Profile status updated to ${status} successfully!\n\nNote: Profile has been removed from matches as status is no longer Active.`);
           } else {
@@ -170,143 +234,59 @@ export default function AdminDashboard() {
   };
 
   const fetchProfiles = useCallback(async () => {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      // Set a high limit to get all profiles
-      queryParams.append('limit', '1000');
-      
-      if (filters.search) queryParams.append('search', filters.search);
-      if (filters.ageMin) queryParams.append('ageMin', filters.ageMin);
-      if (filters.ageMax) queryParams.append('ageMax', filters.ageMax);
-      if (filters.education) queryParams.append('education', filters.education);
-      if (filters.occupation) queryParams.append('occupation', filters.occupation);
-      if (filters.submittedBy) queryParams.append('submittedBy', filters.submittedBy);
-
-      const response = await fetch(`/api/profiles?${queryParams.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        const fetchedProfiles = data.profiles || [];
-        setProfiles(fetchedProfiles);
-        
-        // Skip profile sync for better performance
-        
-        // Show profiles immediately for fast UI
-        setLoading(false);
-        
-        // Load match counts in background (only for active profiles)
-        setTimeout(async () => {
-          const matchCounts: Record<string, number> = {};
-          const activeProfiles = fetchedProfiles.filter((p: Profile) => p.status === 'Active' || !p.status);
-          
-          // Process in smaller batches to prevent hanging
-          const batchSize = 3;
-          for (let i = 0; i < activeProfiles.length; i += batchSize) {
-            const batch = activeProfiles.slice(i, i + batchSize);
-            const batchPromises = batch.map(async (profile: Profile) => {
-              try {
-                const profileId = getProfileId(profile);
-                const response = await fetch(`/api/profiles/${profileId}/matches`);
-                if (response.ok) {
-                  const matchData = await response.json();
-                  return { profileId, count: matchData.matches?.length || 0 };
-                }
-                return { profileId, count: 0 };
-              } catch {
-                return { profileId: getProfileId(profile), count: 0 };
-              }
-            });
-            
-            const batchResults = await Promise.all(batchPromises);
-            batchResults.forEach(({ profileId, count }) => {
-              matchCounts[profileId] = count;
-            });
-            
-            // Update UI progressively
-            setProfileMatches(prev => ({ ...prev, ...Object.fromEntries(batchResults.map(r => [r.profileId, r.count])) }));
-            
-            // Prevent overwhelming server
-            if (i + batchSize < activeProfiles.length) {
-              await new Promise(resolve => setTimeout(resolve, 200));
-            }
-          }
-        }, 1000); // Start after 1 second delay
-        
-      }
-    } catch {
-      setLoading(false); // Set loading false on error
-    }
-  }, [filters]); // Keep filters dependency for useCallback but don't auto-call
+    // Use SWR's mutate to refresh data
+    await refreshProfiles();
+  }, [refreshProfiles]);
 
   useEffect(() => {
-    // Prevent multiple initial fetches using ref
-    if (hasInitialFetch.current) {
-      return;
-    }
-    
     if (status === 'loading') return;
     if (!session) {
       router.push('/login');
       return;
     }
     
-    // Mark as fetched to prevent re-runs
-    hasInitialFetch.current = true;
-    setLoading(true);
-    
-    fetch('/api/profiles?limit=1000')
-      .then(res => res.json())
-      .then(data => {
-        const profilesArray = data.profiles || data || [];
-        setProfiles(profilesArray);
-        
-        // Show profiles immediately for fast UI
-        setLoading(false);
-        
-        // Load match counts in background (only for active profiles)
-        setTimeout(async () => {
-          const matchCounts: Record<string, number> = {};
-          const activeProfiles = profilesArray.filter((p: Profile) => p.status === 'Active' || !p.status);
+    // Load match counts when profiles are loaded (only once per session)
+    if (profiles.length > 0 && Object.keys(profileMatches).length === 0) {
+      const activeProfiles = profiles.filter((p: Profile) => p.status === 'Active' || !p.status);
+      
+      // Batch load match counts with delays to prevent server overload
+      setTimeout(async () => {
+        const batchSize = 3;
+        for (let i = 0; i < activeProfiles.length; i += batchSize) {
+          const batch = activeProfiles.slice(i, i + batchSize);
           
-          // Process in smaller batches to prevent hanging
-          const batchSize = 3;
-          for (let i = 0; i < activeProfiles.length; i += batchSize) {
-            const batch = activeProfiles.slice(i, i + batchSize);
-            const batchPromises = batch.map(async (profile: Profile) => {
-              try {
-                const profileId = getProfileId(profile);
-                const matchResponse = await fetch(`/api/profiles/${profileId}/matches`);
-                
-                if (matchResponse.ok) {
-                  const matchData = await matchResponse.json();
-                  return { profileId, count: matchData.matches?.length || 0 };
-                }
-                return { profileId, count: 0 };
-              } catch {
-                return { profileId: getProfileId(profile), count: 0 };
+          // Parallel fetch for this batch
+          const batchPromises = batch.map(async (profile: Profile) => {
+            try {
+              const profileId = getProfileId(profile);
+              const response = await fetch(`/api/profiles/${profileId}/matches`);
+              
+              if (response.ok) {
+                const data = await response.json();
+                return { profileId, count: data.matches?.length || 0 };
               }
-            });
-            
-            const batchResults = await Promise.all(batchPromises);
-            batchResults.forEach(({ profileId, count }) => {
-              matchCounts[profileId] = count;
-            });
-            
-            // Update UI progressively
-            setProfileMatches(prev => ({ ...prev, ...Object.fromEntries(batchResults.map(r => [r.profileId, r.count])) }));
-            
-            // Prevent overwhelming server
-            if (i + batchSize < activeProfiles.length) {
-              await new Promise(resolve => setTimeout(resolve, 200));
+              return { profileId, count: 0 };
+            } catch {
+              return { profileId: getProfileId(profile), count: 0 };
             }
+          });
+          
+          const results = await Promise.all(batchPromises);
+          
+          // Update state progressively for better UX
+          setProfileMatches(prev => ({
+            ...prev,
+            ...Object.fromEntries(results.map(r => [r.profileId, r.count]))
+          }));
+          
+          // Delay between batches to prevent server overload
+          if (i + batchSize < activeProfiles.length) {
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
-        }, 1000); // Start after 1 second delay
-      })
-      .catch(error => {
-        console.error('Error fetching profiles:', error);
-        setLoading(false);
-      });
-  }, [session, status, router]);
+        }
+      }, 1000); // Initial delay to let profiles render first
+    }
+  }, [session, status, router, profiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const findMatches = async (profileId: string) => {
     setMatchesLoading(true);
@@ -328,7 +308,6 @@ export default function AdminDashboard() {
   };
 
   const applyFilters = () => {
-    setLoading(true);
     fetchProfiles();
   };
 
@@ -341,7 +320,6 @@ export default function AdminDashboard() {
       occupation: '',
       submittedBy: ''
     });
-    setLoading(true);
     fetchProfiles();
   };
 
@@ -448,12 +426,13 @@ export default function AdminDashboard() {
       const data = await response.json();
       
       if (data.success) {
-        // Update local profiles state with proper merge
-        const updatedProfile = { ...editingProfile, ...editData };
+        // Clear match counts cache
+        setProfileMatches({});
+        localStorage.removeItem('profileMatchCounts');
+        localStorage.removeItem('profileMatchCounts_timestamp');
         
-        setProfiles(prev => prev.map(p => 
-          getProfileId(p) === getProfileId(editingProfile) ? updatedProfile : p
-        ));
+        // Refresh profiles from server
+        await refreshProfiles();
         
         setIsEditingProfile(false);
         setEditMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -501,8 +480,13 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        // Remove profile from the list
-        setProfiles(prev => prev.filter(p => getProfileId(p) !== profileId));
+        // Clear match counts cache
+        setProfileMatches({});
+        localStorage.removeItem('profileMatchCounts');
+        localStorage.removeItem('profileMatchCounts_timestamp');
+        
+        // Refresh profiles from server
+        await refreshProfiles();
         setEditMessage({ type: 'success', text: `Profile ${profileToDelete.name} deleted successfully!` });
         
         // Close modals and reset states
@@ -688,14 +672,29 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        <div className="flex justify-center mb-6">
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 max-w-2xl mx-auto px-2 sm:px-4">
             <Link
               href="/compare"
-              className="flex items-center justify-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors font-medium text-sm shadow-sm hover:shadow-md"
+              className="flex items-center justify-center space-x-1 sm:space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-6 py-2.5 rounded-lg transition-colors font-medium text-xs sm:text-sm shadow-sm hover:shadow-md"
             >
-              <span>�</span>
-              <span>Compare Two Profiles</span>
+              <span>🔄</span>
+              <span>Compare</span>
             </Link>
+            
+            <button
+              onClick={() => {
+                setProfileMatches({});
+                localStorage.removeItem('profileMatchCounts');
+                localStorage.removeItem('profileMatchCounts_timestamp');
+                window.location.reload();
+              }}
+              className="flex items-center justify-center space-x-1 sm:space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-2 sm:px-6 py-2.5 rounded-lg transition-colors font-medium text-xs sm:text-sm shadow-sm hover:shadow-md"
+              title="Refresh all data and match counts"
+            >
+              <span>♻️</span>
+              <span>Refresh</span>
+            </button>
         </div>
 
         {/* Stats */}
@@ -705,15 +704,15 @@ export default function AdminDashboard() {
             <div className="text-gray-600 font-light text-xs sm:text-sm">Total Profiles</div>
           </div>
           <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-teal-600 heading">{profiles.filter(p => p.age >= 18 && p.age <= 25).length}</div>
+            <div className="text-lg sm:text-2xl text-teal-600 heading">{profiles.filter((p: Profile) => p.age >= 18 && p.age <= 25).length}</div>
             <div className="text-gray-600 font-light text-xs sm:text-sm">Young (18-25)</div>
           </div>
           <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-emerald-500 heading">{profiles.filter(p => p.age >= 26 && p.age <= 35).length}</div>
+            <div className="text-lg sm:text-2xl text-emerald-500 heading">{profiles.filter((p: Profile) => p.age >= 26 && p.age <= 35).length}</div>
             <div className="text-gray-600 font-light text-xs sm:text-sm">Adults (26-35)</div>
           </div>
           <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-teal-500 heading">{profiles.filter(p => p.age > 35).length}</div>
+            <div className="text-lg sm:text-2xl text-teal-500 heading">{profiles.filter((p: Profile) => p.age > 35).length}</div>
             <div className="text-gray-600 font-light text-xs sm:text-sm">Mature (35+)</div>
           </div>
         </div>
@@ -745,7 +744,7 @@ export default function AdminDashboard() {
               {/* Mobile Card View - Exact Attachment Design */}
               <div className="block md:hidden">
                 <div className="space-y-3">
-                  {profiles.map((profile) => (
+                  {profiles.map((profile: Profile) => (
                     <div key={getProfileId(profile)} className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${(profile.status && profile.status !== 'Active') ? 'opacity-40' : 'opacity-100'}`}>
                       
                       {/* Profile Section - Exact like attachment */}
@@ -987,7 +986,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                 <tbody className="bg-white/50 divide-y divide-gray-200">
-                  {profiles.map((profile) => (
+                  {profiles.map((profile: Profile) => (
                     <tr key={getProfileId(profile)} className={`hover:bg-gray-50/50 transition-all duration-300 ${
                       profile.status !== 'Active' ? 'opacity-60 bg-gray-50/30' : ''
                     }`}>
