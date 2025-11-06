@@ -2322,6 +2322,7 @@ function EditProfileFormAdmin({
                     type="number"
                     name="numberOfBrothers"
                     value={editData.numberOfBrothers}
+                    onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                     onChange={handleInputChange}
                     min="0"
                     className={inputClasses}
@@ -2333,6 +2334,7 @@ function EditProfileFormAdmin({
                     type="number"
                     name="numberOfMarriedBrothers"
                     value={editData.numberOfMarriedBrothers}
+                    onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                     onChange={handleInputChange}
                     min="0"
                     max={editData.numberOfBrothers}
@@ -2350,6 +2352,7 @@ function EditProfileFormAdmin({
                     type="number"
                     name="numberOfSisters"
                     value={editData.numberOfSisters}
+                    onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                     onChange={handleInputChange}
                     min="0"
                     className={inputClasses}
@@ -2361,6 +2364,7 @@ function EditProfileFormAdmin({
                     type="number"
                     name="numberOfMarriedSisters"
                     value={editData.numberOfMarriedSisters}
+                    onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                     onChange={handleInputChange}
                     min="0"
                     max={editData.numberOfSisters}

@@ -1045,6 +1045,7 @@ export default function FormPage() {
                         type="number"
                         name="numberOfBrothers"
                         value={formData.numberOfBrothers}
+                        onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                         onChange={(e) => setFormData({...formData, numberOfBrothers: parseInt(e.target.value) || 0})}
                         min="0"
                         className={inputClasses}
@@ -1056,6 +1057,7 @@ export default function FormPage() {
                         type="number"
                         name="numberOfMarriedBrothers"
                         value={formData.numberOfMarriedBrothers}
+                        onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                         onChange={(e) => setFormData({...formData, numberOfMarriedBrothers: parseInt(e.target.value) || 0})}
                         min="0"
                         max={formData.numberOfBrothers}
@@ -1073,6 +1075,7 @@ export default function FormPage() {
                         type="number"
                         name="numberOfSisters"
                         value={formData.numberOfSisters}
+                        onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                         onChange={(e) => setFormData({...formData, numberOfSisters: parseInt(e.target.value) || 0})}
                         min="0"
                         className={inputClasses}
@@ -1084,6 +1087,7 @@ export default function FormPage() {
                         type="number"
                         name="numberOfMarriedSisters"
                         value={formData.numberOfMarriedSisters}
+                        onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
                         onChange={(e) => setFormData({...formData, numberOfMarriedSisters: parseInt(e.target.value) || 0})}
                         min="0"
                         max={formData.numberOfSisters}
