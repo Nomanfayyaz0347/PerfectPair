@@ -26,6 +26,7 @@ export interface IProfile extends mongoose.Document {
   houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   country: string;
   city: string;
+  address?: string;
   contactNumber: string;
   photoUrl?: string;
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
@@ -204,6 +205,11 @@ const ProfileSchema = new mongoose.Schema({
   city: {
     type: String,
     required: true,
+    trim: true,
+  },
+  address: {
+    type: String,
+    required: false,
     trim: true,
   },
   contactNumber: {

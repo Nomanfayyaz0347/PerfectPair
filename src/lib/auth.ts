@@ -33,8 +33,11 @@ export const authOptions: NextAuthOptions = {
           try {
             const { default: dbConnect } = await import('@/lib/mongodb');
             const { default: Admin } = await import('@/models/Admin');
+            const { default: Client } = await import('@/models/Client');
             
             await dbConnect();
+            
+            // Check if user is an admin
             const admin = await Admin.findOne({ email: credentials.email });
             
             if (admin) {
@@ -45,6 +48,22 @@ export const authOptions: NextAuthOptions = {
                   email: admin.email,
                   name: admin.name,
                   role: 'admin',
+                };
+              }
+            }
+            
+            // Check if user is a client
+            const client = await Client.findOne({ email: credentials.email, isActive: true });
+            
+            if (client) {
+              const isPasswordValid = await client.comparePassword(credentials.password);
+              if (isPasswordValid) {
+                return {
+                  id: client._id.toString(),
+                  email: client.email,
+                  name: client.name,
+                  role: 'client',
+                  profileId: client.profileId.toString(),
                 };
               }
             }
@@ -67,6 +86,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
+        token.profileId = user.profileId;
       }
       return token;
     },
@@ -74,6 +94,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.sub!;
         session.user.role = token.role as string;
+        session.user.profileId = token.profileId as string;
       }
       return session;
     },

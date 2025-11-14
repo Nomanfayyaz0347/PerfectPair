@@ -229,22 +229,22 @@ function ProfilePageContent() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50">
       {/* Header */}
       <header className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3 sm:py-4">
+        <div className="max-w-md mx-auto px-4">
+          <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-white text-sm sm:text-lg">💕</span>
+              <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-white text-xl">💕</span>
               </div>
-              <h1 className="text-lg sm:text-xl md:text-2xl text-gray-900 tracking-wide heading">
+              <h1 className="text-lg font-bold text-gray-900">
                 PerfectPair
               </h1>
             </div>
             
-            <nav className="flex items-center space-x-3">
-              <Link href="/" className="text-gray-600 hover:text-emerald-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all text-sm">
+            <nav className="flex items-center space-x-2">
+              <Link href="/" className="text-gray-600 active:text-emerald-600 px-2 py-1.5 rounded-lg active:bg-gray-50 transition-all text-xs">
                 Home
               </Link>
-              <Link href="/admin" className="text-gray-600 hover:text-teal-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all text-sm">
+              <Link href="/admin" className="text-gray-600 active:text-teal-600 px-2 py-1.5 rounded-lg active:bg-gray-50 transition-all text-xs">
                 Admin
               </Link>
             </nav>
@@ -252,11 +252,11 @@ function ProfilePageContent() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto px-4 py-6">
         {/* Edit Profile Popup Modal - Same Design as Form Page */}
         {isEditing && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100/50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
               
               {/* Modal Header - Same as Form Page */}
               <div className="bg-white/80 backdrop-blur-sm border-b border-gray-100 p-6">

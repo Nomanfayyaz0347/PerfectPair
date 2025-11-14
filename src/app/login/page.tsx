@@ -49,7 +49,16 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password. Please contact admin for access.');
       } else {
-        router.push('/admin');
+        // Get session to check user role
+        const sessionRes = await fetch('/api/auth/session');
+        const session = await sessionRes.json();
+        
+        // Redirect based on role
+        if (session?.user?.role === 'client') {
+          router.push('/client-matches');
+        } else {
+          router.push('/admin');
+        }
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -60,34 +69,29 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50 flex items-center justify-center py-6 px-3 sm:py-12 sm:px-4 lg:px-8">
-      <div className="max-w-sm sm:max-w-md w-full space-y-6 sm:space-y-8">
-        <div>
-          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center mb-4 shadow-sm">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center py-6 px-4">
+      <div className="max-w-md w-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
             <span className="text-white text-2xl">💕</span>
           </div>
-          <h2 className="text-center text-2xl sm:text-3xl text-gray-900 mb-2 heading tracking-wide">
-            PerfectPair
-          </h2>
-          <h3 className="text-center text-lg sm:text-xl text-gray-900 mb-2 heading">
-            Admin Login
-          </h3>
-          <p className="text-center text-sm font-light text-gray-600 px-2 tracking-wide">
-            Access the PerfectPair admin dashboard
-          </p>
-
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">PerfectPair</h2>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Admin Login</h3>
+          <p className="text-sm text-gray-600">Access the admin dashboard</p>
         </div>
         
-        <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg" onSubmit={handleSubmit} autoComplete="off">
+        {/* Login Form */}
+        <form className="bg-white p-6 rounded-2xl shadow-xl" onSubmit={handleSubmit} autoComplete="off">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
               {error}
             </div>
           )}
           
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-light text-gray-700 tracking-wide">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
               <input
@@ -98,13 +102,13 @@ export default function LoginPage() {
                 autoComplete="off"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 text-base sm:text-sm touch-manipulation"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base"
                 placeholder="Enter your email"
               />
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-light text-gray-700 tracking-wide">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
               <input
@@ -115,33 +119,31 @@ export default function LoginPage() {
                 autoComplete="new-password"
                 value={credentials.password}
                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                className="mt-1 appearance-none relative block w-full px-4 py-3 sm:px-3 sm:py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 text-base sm:text-sm touch-manipulation"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base"
                 placeholder="Enter your password"
               />
             </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-light rounded-full text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all tracking-wide shadow-lg hover:shadow-xl"
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
-                </div>
-              ) : (
-                'Sign in'
-              )}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-6 py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-base font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Signing in...
+              </div>
+            ) : (
+              'Sign in'
+            )}
+          </button>
           
-          <div className="text-center">
+          <div className="text-center mt-4">
             <Link
               href="/"
-              className="text-emerald-600 hover:text-emerald-500 text-sm font-light tracking-wide"
+              className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
             >
               ← Back to Home
             </Link>

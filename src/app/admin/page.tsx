@@ -63,6 +63,21 @@ interface Profile {
   createdAt: string;
 }
 
+interface ClientAccess {
+  _id: string;
+  email: string;
+  name: string;
+  profileId: {
+    _id: string;
+    name: string;
+    gender: string;
+    age: number;
+  } | string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -78,7 +93,8 @@ export default function AdminDashboard() {
       revalidateOnFocus: false,    // Don't reload when tab changes
       revalidateOnReconnect: false, // Don't reload on reconnect
       refreshInterval: 0,           // No auto refresh
-      dedupingInterval: 60000,      // Cache for 60 seconds
+      dedupingInterval: 120000,     // Cache for 2 minutes (matches server cache)
+      keepPreviousData: true,       // Show old data while loading new
     }
   );
   
@@ -148,6 +164,42 @@ export default function AdminDashboard() {
     occupation: '',
     submittedBy: ''
   });
+
+  // Tab Management State
+  const [activeTab, setActiveTab] = useState<'profiles' | 'clients'>('profiles');
+
+  // Client Management States
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientFormData, setClientFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    profileId: '',
+  });
+  const [clientMessage, setClientMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Client Delete States
+  const [showClientDeleteConfirm, setShowClientDeleteConfirm] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<ClientAccess | null>(null);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
+
+  // Fetch clients data
+  const { data: clientsData, error: clientsError, mutate: refreshClients } = useSWR(
+    session && activeTab === 'clients' ? '/api/clients' : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 0,
+      dedupingInterval: 60000,
+    }
+  );
+
+  const clients = useMemo(() => {
+    return clientsData?.clients || [];
+  }, [clientsData]);
+
+  const clientsLoading = activeTab === 'clients' && !clientsData && !clientsError;
 
   // Helper function to safely get profile ID - handles both MongoDB and in-memory profiles
   const getProfileId = (profile: Profile): string => {
@@ -246,12 +298,13 @@ export default function AdminDashboard() {
     }
     
     // Load match counts when profiles are loaded (only once per session)
+    // Use longer delay and larger batches for better perceived performance
     if (profiles.length > 0 && Object.keys(profileMatches).length === 0) {
       const activeProfiles = profiles.filter((p: Profile) => p.status === 'Active' || !p.status);
       
       // Batch load match counts with delays to prevent server overload
       setTimeout(async () => {
-        const batchSize = 3;
+        const batchSize = 5; // Increased batch size from 3 to 5
         for (let i = 0; i < activeProfiles.length; i += batchSize) {
           const batch = activeProfiles.slice(i, i + batchSize);
           
@@ -279,12 +332,12 @@ export default function AdminDashboard() {
             ...Object.fromEntries(results.map(r => [r.profileId, r.count]))
           }));
           
-          // Delay between batches to prevent server overload
+          // Reduced delay between batches from 200ms to 100ms
           if (i + batchSize < activeProfiles.length) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
-      }, 1000); // Initial delay to let profiles render first
+      }, 500); // Reduced initial delay from 1000ms to 500ms
     }
   }, [session, status, router, profiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -513,6 +566,83 @@ export default function AdminDashboard() {
     setProfileToDelete(null);
   };
 
+  // Client Management Functions
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setClientMessage(null);
+
+    try {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientFormData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setClientMessage({ type: 'error', text: data.error || 'Failed to create client' });
+        return;
+      }
+
+      setClientMessage({ type: 'success', text: 'Client account created successfully! Share the login credentials with your client.' });
+      setClientFormData({ name: '', email: '', password: '', profileId: '' });
+      
+      // Refresh clients list
+      refreshClients();
+      
+      // Auto close after 3 seconds
+      setTimeout(() => {
+        setShowClientModal(false);
+        setClientMessage(null);
+      }, 3000);
+    } catch (error) {
+      console.error('Error creating client:', error);
+      setClientMessage({ type: 'error', text: 'Failed to create client' });
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!clientToDelete) return;
+    
+    setIsDeletingClient(true);
+    
+    try {
+      const response = await fetch(`/api/clients?id=${clientToDelete._id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete client');
+        return;
+      }
+
+      // Refresh clients list
+      refreshClients();
+      
+      // Close modal
+      setShowClientDeleteConfirm(false);
+      setClientToDelete(null);
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert('Failed to delete client');
+    } finally {
+      setIsDeletingClient(false);
+    }
+  };
+
+  const openClientModal = (profile: Profile) => {
+    setClientFormData({
+      name: profile.name,
+      email: '',
+      password: '',
+      profileId: getProfileId(profile),
+    });
+    setShowClientModal(true);
+    setClientMessage(null);
+  };
+
 
 
   if (status === 'loading') {
@@ -528,69 +658,44 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50">
-      {/* Mobile-First Header */}
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      {/* Mobile Header */}
       <header className="bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 sm:py-6">
-          {/* Mobile Layout */}
-          <div className="sm:hidden">
-            {/* Top Row: Logo + Title + Sign Out */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-sm">
-                  <span className="text-white text-sm">💕</span>
-                </div>
-                <div>
-                  <h1 className="text-base text-gray-900 heading">PerfectPair Admin</h1>
-                </div>
-              </div>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-3 py-1.5 rounded-full transition-all text-xs font-light touch-manipulation shadow-md"
-              >
-                Sign Out
-              </button>
-            </div>
-
-            {/* Bottom Row: Subtitle + Welcome */}
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-light text-gray-600">Manage profiles and find matches</p>
-              <span className="text-xs font-light text-gray-500">Welcome, {session.user?.name}</span>
-            </div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden sm:flex sm:justify-between sm:items-center">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-white text-lg">💕</span>
+        <div className="max-w-md mx-auto px-4 py-4">
+          {/* Top Row: Logo + Title + Sign Out */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-white text-xl">💕</span>
               </div>
               <div>
-                <h1 className="text-2xl text-gray-900 heading tracking-wide">PerfectPair Admin</h1>
-                <p className="text-sm font-light text-gray-600 tracking-wide">Manage profiles and find matches</p>
+                <h1 className="text-lg font-bold text-gray-900">PerfectPair Admin</h1>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm font-light text-gray-600 tracking-wide">Welcome, {session.user?.name}</span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-full transition-all text-sm font-light tracking-wide touch-manipulation shadow-md hover:shadow-lg"
-              >
-                Sign Out
-              </button>
-            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="bg-gradient-to-r from-red-500 to-red-600 active:from-red-600 active:to-red-700 text-white px-3 py-1.5 rounded-full transition-all text-xs shadow-md active:scale-95"
+            >
+              Sign Out
+            </button>
+          </div>
+
+          {/* Bottom Row: Subtitle + Welcome */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-600">Manage profiles and find matches</p>
+            <span className="text-xs text-gray-500">Welcome, {session.user?.name}</span>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 lg:px-8 sm:py-8">
-        {/* Mobile-First Filters */}
-        <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-lg shadow-sm p-4 sm:p-6 mb-6 sm:mb-8">
+      <div className="max-w-md mx-auto px-4 py-4">
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
           <div 
             className="flex items-center justify-between cursor-pointer"
             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
           >
-            <h2 className="text-base sm:text-lg heading">Search & Filters</h2>
+            <h2 className="text-base font-semibold text-gray-900">Search & Filters</h2>
             <div className="text-emerald-600 transition-transform duration-200" style={{ transform: isFiltersOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -600,23 +705,23 @@ export default function AdminDashboard() {
           
           {isFiltersOpen && (
             <div className="mt-4">
-              <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-4">
+              <div className="space-y-3 mb-4">
             <input
               type="text"
               name="search"
               placeholder="Search by name..."
               value={filters.search}
               onChange={handleFilterChange}
-              className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
             />
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <input
                 type="number"
                 name="ageMin"
                 placeholder="Min Age"
                 value={filters.ageMin}
                 onChange={handleFilterChange}
-                className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
               />
               <input
                 type="number"
@@ -624,7 +729,7 @@ export default function AdminDashboard() {
                 placeholder="Max Age"
                 value={filters.ageMax}
                 onChange={handleFilterChange}
-                className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
             <input
@@ -633,7 +738,7 @@ export default function AdminDashboard() {
               placeholder="Education"
               value={filters.education}
               onChange={handleFilterChange}
-              className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
             />
             <input
               type="text"
@@ -641,13 +746,13 @@ export default function AdminDashboard() {
               placeholder="Occupation"
               value={filters.occupation}
               onChange={handleFilterChange}
-              className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
             />
             <select
               name="submittedBy"
               value={filters.submittedBy}
               onChange={handleFilterChange}
-              className="px-3 py-2 sm:px-3 sm:py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 touch-manipulation font-light bg-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500 bg-white"
             >
               <option value="">All Submissions</option>
               <option value="Main Admin">Direct Clients</option>
@@ -657,70 +762,84 @@ export default function AdminDashboard() {
           <div className="flex space-x-3">
             <button
               onClick={applyFilters}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-1.5 rounded-md transition-all font-light shadow-sm hover:shadow-md text-sm"
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 active:from-emerald-600 active:to-teal-700 text-white px-4 py-2 rounded-lg transition-all shadow-md active:scale-95 text-sm"
             >
               Apply Filters
             </button>
             <button
               onClick={clearFilters}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded-md transition-colors font-light text-sm"
+              className="flex-1 bg-gray-500 active:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm active:scale-95"
             >
-              Clear Filters
+              Clear
             </button>
           </div>
             </div>
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 max-w-2xl mx-auto px-2 sm:px-4">
-            <Link
-              href="/compare"
-              className="flex items-center justify-center space-x-1 sm:space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-6 py-2.5 rounded-lg transition-colors font-medium text-xs sm:text-sm shadow-sm hover:shadow-md"
-            >
-              <span>🔄</span>
-              <span>Compare</span>
-            </Link>
-            
+        {/* Compare Button */}
+        <div className="mb-4">
+          <Link
+            href="/compare"
+            className="flex items-center justify-center space-x-2 bg-blue-500 active:bg-blue-600 text-white px-4 py-2.5 rounded-lg transition-colors text-sm shadow-md active:scale-95 w-full"
+          >
+            <span>🔄</span>
+            <span>Compare Profiles</span>
+          </Link>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-lg mb-4">
+          <div className="flex gap-2 p-3">
             <button
-              onClick={() => {
-                setProfileMatches({});
-                localStorage.removeItem('profileMatchCounts');
-                localStorage.removeItem('profileMatchCounts_timestamp');
-                window.location.reload();
-              }}
-              className="flex items-center justify-center space-x-1 sm:space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-2 sm:px-6 py-2.5 rounded-lg transition-colors font-medium text-xs sm:text-sm shadow-sm hover:shadow-md"
-              title="Refresh all data and match counts"
+              onClick={() => setActiveTab('profiles')}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all active:scale-95 ${
+                activeTab === 'profiles'
+                  ? 'bg-emerald-500 text-white' 
+                  : 'bg-gray-100 text-gray-700 active:bg-gray-200'
+              }`}
             >
-              <span>♻️</span>
-              <span>Refresh</span>
+              Profiles ({profiles.length})
             </button>
+            <button
+              onClick={() => setActiveTab('clients')}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all active:scale-95 ${
+                activeTab === 'clients'
+                  ? 'bg-purple-500 text-white' 
+                  : 'bg-gray-100 text-gray-700 active:bg-gray-200'
+              }`}
+            >
+              Client Access ({clients.length})
+            </button>
+          </div>
         </div>
 
+        {activeTab === 'profiles' ? (
+          <>
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-emerald-600 heading">{profiles.length}</div>
-            <div className="text-gray-600 font-light text-xs sm:text-sm">Total Profiles</div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-white rounded-lg shadow-md p-3">
+            <div className="text-xl font-bold text-emerald-600">{profiles.length}</div>
+            <div className="text-gray-600 text-xs">Total Profiles</div>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-teal-600 heading">{profiles.filter((p: Profile) => p.age >= 18 && p.age <= 25).length}</div>
-            <div className="text-gray-600 font-light text-xs sm:text-sm">Young (18-25)</div>
+          <div className="bg-white rounded-lg shadow-md p-3">
+            <div className="text-xl font-bold text-teal-600">{profiles.filter((p: Profile) => p.age >= 18 && p.age <= 25).length}</div>
+            <div className="text-gray-600 text-xs">Young (18-25)</div>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-emerald-500 heading">{profiles.filter((p: Profile) => p.age >= 26 && p.age <= 35).length}</div>
-            <div className="text-gray-600 font-light text-xs sm:text-sm">Adults (26-35)</div>
+          <div className="bg-white rounded-lg shadow-md p-3">
+            <div className="text-xl font-bold text-emerald-500">{profiles.filter((p: Profile) => p.age >= 26 && p.age <= 35).length}</div>
+            <div className="text-gray-600 text-xs">Adults (26-35)</div>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-md shadow-sm p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl text-teal-500 heading">{profiles.filter((p: Profile) => p.age > 35).length}</div>
-            <div className="text-gray-600 font-light text-xs sm:text-sm">Mature (35+)</div>
+          <div className="bg-white rounded-lg shadow-md p-3">
+            <div className="text-xl font-bold text-teal-500">{profiles.filter((p: Profile) => p.age > 35).length}</div>
+            <div className="text-gray-600 text-xs">Mature (35+)</div>
           </div>
         </div>
 
-        {/* Profiles Table */}
-        <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg heading">All Profiles</h2>
+        {/* Profiles List */}
+        <div className="bg-white rounded-xl shadow-lg">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <h2 className="text-base font-semibold text-gray-900">All Profiles</h2>
           </div>
           
           {loading ? (
@@ -730,19 +849,19 @@ export default function AdminDashboard() {
                 <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                 <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <p className="text-sm text-gray-600 font-light">Loading profiles...</p>
+              <p className="text-sm text-gray-600">Loading profiles...</p>
             </div>
           ) : profiles.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              <p className="font-light">No profiles found.</p>
-              <Link href="/form" className="text-emerald-600 hover:text-emerald-500 mt-2 inline-block font-light">
+              <p>No profiles found.</p>
+              <Link href="/form" className="text-emerald-600 active:text-emerald-700 mt-2 inline-block">
                 Create the first profile →
               </Link>
             </div>
           ) : (
             <>
-              {/* Mobile Card View - Exact Attachment Design */}
-              <div className="block md:hidden">
+              {/* Mobile Card View */}
+              <div>
                 <div className="space-y-3">
                   {profiles.map((profile: Profile) => (
                     <div key={getProfileId(profile)} className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${(profile.status && profile.status !== 'Active') ? 'opacity-40' : 'opacity-100'}`}>
@@ -897,6 +1016,15 @@ export default function AdminDashboard() {
                           >
                             Edit
                           </button>
+                          
+                          {/* Create Client Access Button */}
+                          <button
+                            onClick={() => openClientModal(profile)}
+                            className="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-medium py-2.5 rounded-md transition-colors border border-purple-200"
+                            title="Give client access to view their matches"
+                          >
+                            👤 Client
+                          </button>
 
                           {/* View All Matches Button */}
                           <Link
@@ -968,172 +1096,99 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
-
-              {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50/50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Photo</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Name</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Age</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Education</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Occupation</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Status</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Shared</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Contact</th>
-                      <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider font-light">Actions</th>
-                    </tr>
-                  </thead>
-                <tbody className="bg-white/50 divide-y divide-gray-200">
-                  {profiles.map((profile: Profile) => (
-                    <tr key={getProfileId(profile)} className={`hover:bg-gray-50/50 transition-all duration-300 ${
-                      profile.status !== 'Active' ? 'opacity-60 bg-gray-50/30' : ''
-                    }`}>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-center relative">
-                          {profile.photoUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={profile.photoUrl}
-                              alt={`${profile.name}'s photo`}
-                              className={`w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-full border-2 transition-all duration-300 ${
-                                profile.status === 'Active' ? 'border-gray-200' : 
-                                profile.status === 'Matched' ? 'border-blue-200' :
-                                profile.status === 'Engaged' ? 'border-purple-200' :
-                                profile.status === 'Married' ? 'border-pink-200' :
-                                'border-gray-400 grayscale opacity-70'
-                              }`}
-                            />
-                          ) : (
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                              profile.status === 'Active' ? 'bg-gray-200' : 'bg-gray-300'
-                            }`}>
-                              <span className={`text-xs sm:text-sm ${
-                                profile.status === 'Active' ? 'text-gray-500' : 'text-gray-600'
-                              }`}>👤</span>
-                            </div>
-                          )}
-                          
-                          {/* Match Count Badge for Desktop - Only for Active profiles */}
-                          {profileMatches[profile._id] !== undefined && (profile.status === 'Active' || !profile.status) && (
-                            <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full min-w-[18px] h-4 flex items-center justify-center px-1 shadow-md">
-                              {profileMatches[profile._id]}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <div className={`text-sm heading transition-colors duration-300 ${
-                              profile.status === 'Active' ? 'text-gray-900' : 'text-gray-600'
-                            }`}>{profile.name}</div>
-                            {profile.status !== 'Active' && (
-                              <span className={`text-xs px-1 py-0.5 rounded text-white font-medium ${
-                                profile.status === 'Matched' ? 'bg-blue-500' :
-                                profile.status === 'Engaged' ? 'bg-purple-500' :
-                                profile.status === 'Married' ? 'bg-pink-500' :
-                                'bg-gray-500'
-                              }`}>
-                                {profile.status === 'Matched' ? 'M' :
-                                 profile.status === 'Engaged' ? 'E' :
-                                 profile.status === 'Married' ? '♥' :
-                                 'I'}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-500 font-light">s/o {profile.fatherName}</div>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-light">{profile.age}</td>
-                      <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-light">{profile.education}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-light">{profile.occupation}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          profile.status === 'Active' ? 'bg-green-100 text-green-800' :
-                          profile.status === 'Matched' ? 'bg-blue-100 text-blue-800' :
-                          profile.status === 'Engaged' ? 'bg-purple-100 text-purple-800' :
-                          profile.status === 'Married' ? 'bg-pink-100 text-pink-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {profile.status === 'Active' ? '🟢 Active' :
-                           profile.status === 'Matched' ? '🔵 Matched' :
-                           profile.status === 'Engaged' ? '🟣 Engaged' :
-                           profile.status === 'Married' ? '💜 Married' :
-                           '⚫ Inactive'}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          {getSharedCount(profile)} shared
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-light">{profile.contactNumber}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="space-y-2">
-                          <button
-                            onClick={() => setSelectedProfile(profile)}
-                            className="block text-emerald-600 hover:text-emerald-900 font-light text-xs"
-                          >
-                            View Details
-                          </button>
-                          <button
-                            onClick={() => handleEditProfile(profile)}
-                            className="block text-blue-600 hover:text-blue-900 font-light text-xs"
-                          >
-                            Edit Profile
-                          </button>
-                          
-                          {/* Status Dropdown for Desktop */}
-                          <select
-                            value={profile.status || 'Active'}
-                            onChange={(e) => {
-                              const newStatus = e.target.value as 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
-                              if (newStatus !== (profile.status || 'Active')) {
-                                const profileId = getProfileId(profile);
-
-                                updateProfileStatus(profileId, newStatus);
-                              }
-                            }}
-                            className="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 font-light"
-                          >
-                            <option value="Active">🟢 Active</option>
-                            <option value="Matched">🔵 Matched</option>
-                            <option value="Engaged">🟣 Engaged</option>
-                            <option value="Married">💍 Married</option>
-                            <option value="Inactive">⚫ Inactive</option>
-                          </select>
-                          
-                          {profileMatches[profile._id] > 0 && (profile.status === 'Active' || !profile.status) && (
-                            <Link
-                              href={`/matches?id=${profile._id}&name=${encodeURIComponent(profile.name)}`}
-                              className="text-purple-600 hover:text-purple-900 font-light block text-xs"
-                            >
-                              All ({profileMatches[profile._id]}) →
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  </tbody>
-                </table>
-              </div>
             </>
           )}
         </div>
+        </>
+        ) : (
+          /* Client Access Tab */
+          <div className="bg-white rounded-xl shadow-lg">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Client Access Accounts</h2>
+            </div>
+            
+            {clientsLoading ? (
+              <div className="p-6 text-center">
+                <div className="flex items-center justify-center space-x-1 mb-3">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                </div>
+                <p className="text-sm text-gray-600">Loading clients...</p>
+              </div>
+            ) : clients.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-purple-600 text-2xl">👥</span>
+                </div>
+                <p className="font-medium mb-2">No Client Access Created Yet</p>
+                <p className="text-sm">Create client access from any profile to let them view their matches</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {clients.map((client: ClientAccess) => (
+                  <div key={client._id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="text-sm font-semibold text-gray-900">{client.name}</h3>
+                          {client.isActive ? (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Inactive</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mb-2">📧 {client.email}</p>
+                        {client.profileId && (
+                          <div className="flex items-center space-x-1 text-xs text-gray-500">
+                            <span>👤</span>
+                            <span>Profile: {typeof client.profileId === 'object' ? client.profileId.name : 'N/A'}</span>
+                            {typeof client.profileId === 'object' && (
+                              <>
+                                <span>•</span>
+                                <span>{client.profileId.gender}</span>
+                                <span>•</span>
+                                <span>{client.profileId.age} yrs</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          Created: {new Date(client.createdAt).toLocaleDateString('en-GB')}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0 ml-3">
+                        <button
+                          onClick={() => {
+                            setClientToDelete(client);
+                            setShowClientDeleteConfirm(true);
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
+                          title="Delete client access"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
 
       {/* Profile Detail Modal */}
       {selectedProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-white/95 backdrop-blur-sm border border-gray-100 rounded-lg max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             {/* Header with Profile Photo and Name */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 p-3 sm:p-4 rounded-t-lg">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 rounded-t-xl">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="flex items-center space-x-3">
                   {/* Profile Photo in Header */}
                   {selectedProfile.photoUrl && (
                     <div className="flex-shrink-0">
@@ -1141,14 +1196,14 @@ export default function AdminDashboard() {
                       <img
                         src={selectedProfile.photoUrl}
                         alt={`${selectedProfile.name}'s profile`}
-                        className="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-full border-2 border-emerald-300 shadow-sm"
+                        className="w-12 h-12 object-cover rounded-full border-2 border-emerald-300 shadow-sm"
                       />
                     </div>
                   )}
                   {/* Name and Basic Info */}
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h2 className="text-lg sm:text-xl text-gray-900 heading">{selectedProfile.name}</h2>
+                      <h2 className="text-lg font-bold text-gray-900">{selectedProfile.name}</h2>
                       {selectedProfile.submittedBy && (
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           selectedProfile.submittedBy === 'Main Admin' 
@@ -1170,9 +1225,9 @@ export default function AdminDashboard() {
                     setSelectedProfile(null);
                     setMatches([]);
                   }}
-                  className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                  className="text-gray-400 active:text-gray-600 p-1 flex-shrink-0"
                 >
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -1180,18 +1235,18 @@ export default function AdminDashboard() {
             </div>
 
             {/* Content Area */}
-            <div className="p-3 sm:p-6">
+            <div className="p-4">
               {/* Match Summary Card */}
               {profileMatches[selectedProfile._id] !== undefined && (
-                <div className="mb-4 sm:mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-3 sm:p-4">
+                <div className="mb-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
                         <span className="text-white text-sm">💕</span>
                       </div>
                       <div>
-                        <h3 className="text-sm sm:text-base text-emerald-800 heading">Match Analysis</h3>
-                        <p className="text-xs sm:text-sm text-emerald-600 font-light">
+                        <h3 className="text-sm font-semibold text-emerald-800">Match Analysis</h3>
+                        <p className="text-xs text-emerald-600">
                           {(selectedProfile.status === 'Active' || !selectedProfile.status) ? 
                             `${profileMatches[selectedProfile._id]} compatible profiles found` :
                             'No matches available - Profile is Inactive'
@@ -1201,7 +1256,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-center">
-                        <div className="text-lg sm:text-xl text-emerald-700 heading">
+                        <div className="text-lg font-bold text-emerald-700">
                           {(selectedProfile.status === 'Active' || !selectedProfile.status) ? 
                             profileMatches[selectedProfile._id] : 
                             0
@@ -1231,128 +1286,128 @@ export default function AdminDashboard() {
               )}
               
               {/* 50-50 Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-4">
                 
                 {/* Left Side - Basic Info */}
                 <div className="space-y-3 sm:space-y-4">
 
                   {/* Personal Information */}
                   {/* Personal Information */}
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                    <h3 className="text-base sm:text-lg text-gray-800 heading mb-2 sm:mb-3">👤 Personal Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <h3 className="text-base text-gray-800 heading mb-2">👤 Personal Information</h3>
                     <div className="divide-y divide-gray-200">
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Name:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-medium">{selectedProfile.name}</span>
+                        <span className="text-xs text-gray-600 heading">Name:</span>
+                        <span className="text-xs text-gray-900 font-medium">{selectedProfile.name}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Father&apos;s Name:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.fatherName}</span>
+                        <span className="text-xs text-gray-600 heading">Father&apos;s Name:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.fatherName}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Gender:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.gender}</span>
+                        <span className="text-xs text-gray-600 heading">Gender:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.gender}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Age:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.age} years</span>
+                        <span className="text-xs text-gray-600 heading">Age:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.age} years</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Height:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.height}</span>
+                        <span className="text-xs text-gray-600 heading">Height:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.height}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Weight:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.weight}</span>
+                        <span className="text-xs text-gray-600 heading">Weight:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.weight}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Complexion:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.color}</span>
+                        <span className="text-xs text-gray-600 heading">Complexion:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.color}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Cast:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.cast}</span>
+                        <span className="text-xs text-gray-600 heading">Cast:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.cast}</span>
                       </div>
                       {selectedProfile.maslak && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Maslak:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.maslak}</span>
+                          <span className="text-xs text-gray-600 heading">Maslak:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.maslak}</span>
                         </div>
                       )}
                       {selectedProfile.maritalStatus && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Marital Status:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.maritalStatus}</span>
+                          <span className="text-xs text-gray-600 heading">Marital Status:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.maritalStatus}</span>
                         </div>
                       )}
                       {selectedProfile.motherTongue && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Mother Tongue:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.motherTongue}</span>
+                          <span className="text-xs text-gray-600 heading">Mother Tongue:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.motherTongue}</span>
                         </div>
                       )}
                       {selectedProfile.belongs && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Belongs:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.belongs}</span>
+                          <span className="text-xs text-gray-600 heading">Belongs:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.belongs}</span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Professional & Education */}
-                  <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
-                    <h3 className="text-base sm:text-lg text-gray-800 heading mb-2">🎓 Education & Career</h3>
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <h3 className="text-base text-gray-800 heading mb-2">🎓 Education & Career</h3>
                     <div className="divide-y divide-gray-200">
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Education:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.education}</span>
+                        <span className="text-xs text-gray-600 heading">Education:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.education}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Occupation:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.occupation}</span>
+                        <span className="text-xs text-gray-600 heading">Occupation:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.occupation}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Income:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.income}</span>
+                        <span className="text-xs text-gray-600 heading">Income:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.income}</span>
                       </div>
                       {selectedProfile.houseType && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">House Type:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.houseType}</span>
+                          <span className="text-xs text-gray-600 heading">House Type:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.houseType}</span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Contact Information */}
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                    <h3 className="text-base sm:text-lg text-gray-800 heading mb-2">📱 Contact Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <h3 className="text-base text-gray-800 heading mb-2">📱 Contact Information</h3>
                     <div className="divide-y divide-gray-200">
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Phone:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.contactNumber}</span>
+                        <span className="text-xs text-gray-600 heading">Phone:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.contactNumber}</span>
                       </div>
                       <div className="flex justify-between items-start py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Address:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light text-right max-w-xs">{selectedProfile.address}</span>
+                        <span className="text-xs text-gray-600 heading">Address:</span>
+                        <span className="text-xs text-gray-900 font-light text-right max-w-xs">{selectedProfile.address || 'Not provided'}</span>
                       </div>
                       {selectedProfile.email && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Email:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light break-all">{selectedProfile.email}</span>
+                          <span className="text-xs text-gray-600 heading">Email:</span>
+                          <span className="text-xs text-gray-900 font-light break-all">{selectedProfile.email}</span>
                         </div>
                       )}
                       {selectedProfile.country && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Country:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.country}</span>
+                          <span className="text-xs text-gray-600 heading">Country:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.country}</span>
                         </div>
                       )}
                       {selectedProfile.city && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">City:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.city}</span>
+                          <span className="text-xs text-gray-600 heading">City:</span>
+                          <span className="text-xs text-gray-900 font-light">{selectedProfile.city}</span>
                         </div>
                       )}
                     </div>
@@ -1360,39 +1415,39 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Right Side - Professional + Requirements */}
-                <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-3">
                   {/* Professional Information */}
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                    <h3 className="text-base sm:text-lg text-gray-800 heading mb-2">💼 Professional Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <h3 className="text-base text-gray-800 heading mb-2">💼 Professional Information</h3>
                     <div className="divide-y divide-gray-200">
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Education:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.education}</span>
+                        <span className="text-xs text-gray-600 heading">Education:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.education}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Occupation:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.occupation}</span>
+                        <span className="text-xs text-gray-600 heading">Occupation:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.occupation}</span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Income:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.income}</span>
+                        <span className="text-xs text-gray-600 heading">Income:</span>
+                        <span className="text-xs text-gray-900 font-light">{selectedProfile.income}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Family Details */}
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                    <h3 className="text-base sm:text-lg text-gray-800 heading mb-2">👨‍👩‍👧‍👦 Family Details</h3>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <h3 className="text-base text-gray-800 heading mb-2">👨‍👩‍👧‍👦 Family Details</h3>
                     <div className="space-y-3">
                       {/* Parents Status */}
                       <div className="flex flex-wrap gap-3 px-2">
                         <div className="flex items-center">
                           <span className={`w-2.5 h-2.5 rounded-full ${selectedProfile.fatherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
-                          <span className="text-xs sm:text-sm text-gray-700 font-light">Father {selectedProfile.fatherAlive ? '(Living)' : '(Deceased)'}</span>
+                          <span className="text-xs text-gray-700 font-light">Father {selectedProfile.fatherAlive ? '(Living)' : '(Deceased)'}</span>
                         </div>
                         <div className="flex items-center">
                           <span className={`w-2.5 h-2.5 rounded-full ${selectedProfile.motherAlive ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
-                          <span className="text-xs sm:text-sm text-gray-700 font-light">Mother {selectedProfile.motherAlive ? '(Living)' : '(Deceased)'}</span>
+                          <span className="text-xs text-gray-700 font-light">Mother {selectedProfile.motherAlive ? '(Living)' : '(Deceased)'}</span>
                         </div>
                       </div>
 
@@ -1402,12 +1457,12 @@ export default function AdminDashboard() {
                           <h4 className="text-xs text-gray-600 mb-1">Brothers</h4>
                           <div className="space-y-1">
                             <div className="flex justify-between">
-                              <span className="text-xs sm:text-sm text-gray-600">Total:</span>
-                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfBrothers}</span>
+                              <span className="text-xs text-gray-600">Total:</span>
+                              <span className="text-xs text-gray-900 font-light">{selectedProfile.numberOfBrothers}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-xs sm:text-sm text-gray-600">Married:</span>
-                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfMarriedBrothers}</span>
+                              <span className="text-xs text-gray-600">Married:</span>
+                              <span className="text-xs text-gray-900 font-light">{selectedProfile.numberOfMarriedBrothers}</span>
                             </div>
                           </div>
                         </div>
@@ -1415,12 +1470,12 @@ export default function AdminDashboard() {
                           <h4 className="text-xs text-gray-600 mb-1">Sisters</h4>
                           <div className="space-y-1">
                             <div className="flex justify-between">
-                              <span className="text-xs sm:text-sm text-gray-600">Total:</span>
-                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfSisters}</span>
+                              <span className="text-xs text-gray-600">Total:</span>
+                              <span className="text-xs text-gray-900 font-light">{selectedProfile.numberOfSisters}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-xs sm:text-sm text-gray-600">Married:</span>
-                              <span className="text-xs sm:text-sm text-gray-900 font-light">{selectedProfile.numberOfMarriedSisters}</span>
+                              <span className="text-xs text-gray-600">Married:</span>
+                              <span className="text-xs text-gray-900 font-light">{selectedProfile.numberOfMarriedSisters}</span>
                             </div>
                           </div>
                         </div>
@@ -1429,7 +1484,7 @@ export default function AdminDashboard() {
                       {/* Additional Details */}
                       <div className="px-2">
                         <h4 className="text-xs text-gray-600 mb-1">Additional Details</h4>
-                        <p className="text-xs sm:text-sm text-gray-900 font-light leading-relaxed">
+                        <p className="text-xs text-gray-900 font-light leading-relaxed">
                           {selectedProfile.familyDetails || 'No additional family details provided'}
                         </p>
                       </div>
@@ -1437,50 +1492,50 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Partner Requirements */}
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                    <h3 className="text-base sm:text-lg text-gray-800 heading mb-2">💕 Partner Requirements</h3>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <h3 className="text-base text-gray-800 heading mb-2">💕 Partner Requirements</h3>
                     <div className="divide-y divide-gray-200">
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Age Range:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Age Range:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {selectedProfile.requirements.ageRange.min} - {selectedProfile.requirements.ageRange.max} years
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Height Range:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Height Range:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {selectedProfile.requirements.heightRange.min} - {selectedProfile.requirements.heightRange.max}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Education:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Education:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {selectedProfile.requirements.education || 'Any'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Occupation:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Occupation:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {selectedProfile.requirements.occupation || 'Any'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Family Type:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Family Type:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {selectedProfile.requirements.familyType || 'Any'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Location:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Location:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {Array.isArray(selectedProfile.requirements.location) 
                             ? selectedProfile.requirements.location.join(', ') || 'Any'
                             : selectedProfile.requirements.location || 'Any'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1.5 px-2">
-                        <span className="text-xs sm:text-sm text-gray-600 heading">Cast:</span>
-                        <span className="text-xs sm:text-sm text-gray-900 font-light">
+                        <span className="text-xs text-gray-600 heading">Cast:</span>
+                        <span className="text-xs text-gray-900 font-light">
                           {Array.isArray(selectedProfile.requirements.cast) 
                             ? selectedProfile.requirements.cast.join(', ') || 'Any'
                             : selectedProfile.requirements.cast || 'Any'}
@@ -1488,40 +1543,40 @@ export default function AdminDashboard() {
                       </div>
                       {selectedProfile.requirements.maslak && Array.isArray(selectedProfile.requirements.maslak) && selectedProfile.requirements.maslak.length > 0 && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Maslak:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">
+                          <span className="text-xs text-gray-600 heading">Maslak:</span>
+                          <span className="text-xs text-gray-900 font-light">
                             {selectedProfile.requirements.maslak.join(', ')}
                           </span>
                         </div>
                       )}
                       {selectedProfile.requirements.maritalStatus && Array.isArray(selectedProfile.requirements.maritalStatus) && selectedProfile.requirements.maritalStatus.length > 0 && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Marital Status:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">
+                          <span className="text-xs text-gray-600 heading">Marital Status:</span>
+                          <span className="text-xs text-gray-900 font-light">
                             {selectedProfile.requirements.maritalStatus.join(', ')}
                           </span>
                         </div>
                       )}
                       {selectedProfile.requirements.motherTongue && Array.isArray(selectedProfile.requirements.motherTongue) && selectedProfile.requirements.motherTongue.length > 0 && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Mother Tongue:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">
+                          <span className="text-xs text-gray-600 heading">Mother Tongue:</span>
+                          <span className="text-xs text-gray-900 font-light">
                             {selectedProfile.requirements.motherTongue.join(', ')}
                           </span>
                         </div>
                       )}
                       {selectedProfile.requirements.belongs && Array.isArray(selectedProfile.requirements.belongs) && selectedProfile.requirements.belongs.length > 0 && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">Nationality:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">
+                          <span className="text-xs text-gray-600 heading">Nationality:</span>
+                          <span className="text-xs text-gray-900 font-light">
                             {selectedProfile.requirements.belongs.join(', ')}
                           </span>
                         </div>
                       )}
                       {selectedProfile.requirements.houseType && Array.isArray(selectedProfile.requirements.houseType) && selectedProfile.requirements.houseType.length > 0 && (
                         <div className="flex justify-between items-center py-1.5 px-2">
-                          <span className="text-xs sm:text-sm text-gray-600 heading">House Type:</span>
-                          <span className="text-xs sm:text-sm text-gray-900 font-light">
+                          <span className="text-xs text-gray-600 heading">House Type:</span>
+                          <span className="text-xs text-gray-900 font-light">
                             {selectedProfile.requirements.houseType.join(', ')}
                           </span>
                         </div>
@@ -1533,9 +1588,9 @@ export default function AdminDashboard() {
 
               {/* Matches Section */}
               {(matches.length > 0 || matchesLoading) && (
-                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <h3 className="text-base sm:text-lg text-gray-900 heading">
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-base text-gray-900 heading">
                       Potential Matches {matches.length > 0 && `(${matches.length})`}
                     </h3>
                     {matchesLoading && (
@@ -1545,26 +1600,26 @@ export default function AdminDashboard() {
                       </div>
                     )}
                   </div>
-                  <div className="space-y-3 sm:space-y-4 max-h-48 sm:max-h-60 overflow-y-auto">
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
                     {matches.map((match) => (
-                      <div key={match._id} className="p-3 sm:p-4 bg-gray-50/50 rounded-lg space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                      <div key={match._id} className="p-3 bg-gray-50/50 rounded-lg space-y-3">
+                        <div className="flex flex-col justify-between items-start">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1">
-                              <p className="heading text-emerald-700 text-sm sm:text-base">{match.name}</p>
+                              <p className="heading text-emerald-700 text-sm">{match.name}</p>
                               {match.matchScore && (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                                   {match.matchScore} match
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs sm:text-sm text-gray-600 font-light">
+                            <p className="text-xs text-gray-600 font-light">
                               {match.age} years, {match.education}
                             </p>
-                            <p className="text-xs sm:text-sm text-gray-600 font-light">{match.occupation}</p>
-                            <p className="text-xs sm:text-sm text-gray-600 font-light">{match.contactNumber}</p>
+                            <p className="text-xs text-gray-600 font-light">{match.occupation}</p>
+                            <p className="text-xs text-gray-600 font-light">{match.contactNumber}</p>
                           </div>
-                          <div className="text-xs sm:text-sm text-gray-500 font-light mt-2 sm:mt-0">
+                          <div className="text-xs text-gray-500 font-light mt-2">
                             Height: {match.height}
                           </div>
                         </div>
@@ -1591,12 +1646,12 @@ export default function AdminDashboard() {
                   
                   {/* No matches found message */}
                   {matches.length === 0 && !matchesLoading && (
-                    <div className="text-center py-4 sm:py-6">
+                    <div className="text-center py-4">
                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <span className="text-gray-400 text-lg">💔</span>
                       </div>
-                      <p className="text-sm sm:text-base text-gray-600 font-light">No matches found</p>
-                      <p className="text-xs sm:text-sm text-gray-500 font-light mt-1">
+                      <p className="text-sm text-gray-600 font-light">No matches found</p>
+                      <p className="text-xs text-gray-500 font-light mt-1">
                         Try adjusting the requirements or add more profiles
                       </p>
                     </div>
@@ -1605,14 +1660,14 @@ export default function AdminDashboard() {
               )}
 
               {matchesLoading && (
-                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 text-center">
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-emerald-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600 font-light text-sm sm:text-base">Finding matches...</p>
+                <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600 font-light text-sm">Finding matches...</p>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="mt-4 flex flex-col gap-2">
                 <button
                   onClick={() => findMatches(selectedProfile._id)}
                   disabled={matchesLoading}
@@ -1625,7 +1680,7 @@ export default function AdminDashboard() {
                     setSelectedProfile(null);
                     setMatches([]);
                   }}
-                  className="flex-1 sm:flex-initial bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-md transition-colors text-sm font-light"
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-md transition-colors text-sm font-light"
                 >
                   Close
                 </button>
@@ -1637,8 +1692,8 @@ export default function AdminDashboard() {
 
       {/* Edit Profile Modal - Mobile Optimized */}
       {isEditingProfile && editData && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100/50 rounded-none sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-0">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
             
             {/* Modal Header - Mobile First */}
             <div className="bg-white/90 backdrop-blur-sm border-b border-gray-100 p-3 sm:p-6 sticky top-0 z-10">
@@ -1749,6 +1804,103 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Client Access Modal */}
+      {showClientModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 mx-2">
+            <div className="mb-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <span className="text-purple-600 text-xl sm:text-2xl">👤</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 text-center">Create Client Access</h3>
+              <p className="text-xs sm:text-sm text-gray-600 text-center mb-4">
+                Give your client login credentials to view their matches (without contact numbers)
+              </p>
+            </div>
+
+            {clientMessage && (
+              <div className={`mb-4 p-3 rounded-lg text-sm ${
+                clientMessage.type === 'success' 
+                  ? 'bg-green-50 text-green-800 border border-green-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                {clientMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateClient} className="space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  value={clientFormData.name}
+                  onChange={(e) => setClientFormData({ ...clientFormData, name: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Email (Login ID)
+                </label>
+                <input
+                  type="email"
+                  value={clientFormData.email}
+                  onChange={(e) => setClientFormData({ ...clientFormData, email: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                  placeholder="client@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <input
+                  type="text"
+                  value={clientFormData.password}
+                  onChange={(e) => setClientFormData({ ...clientFormData, password: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                  minLength={6}
+                  placeholder="Minimum 6 characters"
+                />
+                <p className="text-xs text-gray-500 mt-1">Share this password with your client</p>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <p className="text-xs text-purple-800">
+                  <strong>Note:</strong> Client will be able to view their profile and matches, but contact numbers will be hidden for privacy.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowClientModal(false);
+                    setClientMessage(null);
+                  }}
+                  className="w-full sm:flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-full sm:flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all"
+                >
+                  Create Client Access
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && profileToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
@@ -1778,6 +1930,48 @@ export default function AdminDashboard() {
                   className="w-full sm:flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Client Delete Confirmation Modal */}
+      {showClientDeleteConfirm && clientToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full p-4 sm:p-6 mx-2">
+            <div className="text-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <span className="text-red-600 text-xl sm:text-2xl">⚠️</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Delete Client Access</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
+                Are you sure you want to delete client access for <strong>{clientToDelete.name}</strong>?
+              </p>
+              <p className="text-xs sm:text-sm text-gray-500 mb-2">
+                <strong>Email:</strong> {clientToDelete.email}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
+                This will remove their login access. The profile will remain unchanged.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button
+                  onClick={() => {
+                    setShowClientDeleteConfirm(false);
+                    setClientToDelete(null);
+                  }}
+                  disabled={isDeletingClient}
+                  className="w-full sm:flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteClient}
+                  disabled={isDeletingClient}
+                  className="w-full sm:flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeletingClient ? 'Deleting...' : 'Delete Access'}
                 </button>
               </div>
             </div>

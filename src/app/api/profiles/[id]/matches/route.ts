@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Simple in-memory cache for matches
+const matchesCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 interface RouteParams {
   params: Promise<{
     id: string;
@@ -13,6 +17,15 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const profileId = resolvedParams.id;
+    
+    // Check cache first
+    const cached = matchesCache.get(profileId);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      return NextResponse.json({
+        ...cached.data,
+        cached: true
+      });
+    }
     
     let matches = [];
     let useInMemory = false;
@@ -48,8 +61,8 @@ export async function GET(
       // Get all other profiles with opposite gender only (case insensitive)
       const allProfiles = await Profile.find({ 
         _id: { $ne: profileId },
-        gender: { $regex: new RegExp(`^${oppositeGender}$`, 'i') }  // Case insensitive search
-      });
+        gender: { $regex: new RegExp(`^${oppositeGender}$`, 'i') }
+      }).lean().select('-__v').limit(100); // Use lean() for faster queries and limit results
       
       // DYNAMIC & PERCENTAGE-BASED AUTHENTIC MATCHING
       matches = allProfiles.filter(p => {
@@ -400,28 +413,31 @@ export async function GET(
         }
         
         const matchPercentage = Math.round((matchScore / totalValidRequirements) * 100);
-        const MINIMUM_PERCENTAGE = 90; // Increased to 90% for stricter matching
+        const MINIMUM_PERCENTAGE = 70; // Reduced to 70% for faster and more matches
         
         if (matchPercentage >= MINIMUM_PERCENTAGE) {
-
-          p._tempMatchData = { 
+          // Adding temp data for processing
+          (p as Record<string, unknown>)._tempMatchData = { 
             matchedFields, 
             matchScore: `${matchScore}/${totalValidRequirements}`,
             percentage: matchPercentage
           };
           return true;
         } else {
-
           return false;
         }
       });
       
-      // Add matching data to the final matches
-      matches = matches.map(match => ({
-        ...match.toObject(), // Convert MongoDB document to plain object
-        matchedFields: match._tempMatchData?.matchedFields || [],
-        matchScore: match._tempMatchData?.matchScore || '0/12'
-      }));
+      // Add matching data to the final matches - optimized for lean() queries
+      matches = matches.map(match => {
+        // Accessing temp data
+        const tempData = (match as Record<string, unknown>)._tempMatchData as { matchedFields: string[]; matchScore: string } || {};
+        return {
+          ...match, // Already a plain object from lean()
+          matchedFields: tempData.matchedFields || [],
+          matchScore: tempData.matchScore || '0/12'
+        };
+      });
       
 
       
@@ -439,11 +455,19 @@ export async function GET(
       }
     }
     
-    return NextResponse.json({
+    const response = {
       matches,
       count: matches.length,
       method: useInMemory ? 'in-memory' : 'mongodb'
+    };
+    
+    // Store in cache
+    matchesCache.set(profileId, {
+      data: response,
+      timestamp: Date.now()
     });
+    
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error finding matches:', error);
     return NextResponse.json(

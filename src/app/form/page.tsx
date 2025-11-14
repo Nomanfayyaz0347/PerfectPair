@@ -47,6 +47,7 @@ interface FormData {
   houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
   country: string;
   city: string;
+  address?: string;
   contactNumber: string;
   photoUrl?: string;
   submittedBy: 'Main Admin' | 'Partner Matchmaker' | '';
@@ -93,6 +94,7 @@ export default function FormPage() {
     houseType: 'Family House',
     country: 'Pakistan',
     city: 'Karachi',
+    address: '',
     contactNumber: '',
     photoUrl: '',
     submittedBy: '',
@@ -122,6 +124,8 @@ export default function FormPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [nameCheckLoading, setNameCheckLoading] = useState(false);
+  const [nameAvailable, setNameAvailable] = useState<boolean | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -159,6 +163,49 @@ export default function FormPage() {
         ...prev,
         [name]: name === 'age' ? parseInt(value) || 0 : value
       }));
+      
+      // Check name availability when name or fatherName changes
+      if (name === 'name' || name === 'fatherName') {
+        // Only check if both name and father name have values
+        if ((name === 'name' && value && formData.fatherName) || 
+            (name === 'fatherName' && value && formData.name)) {
+          checkNameAvailability(
+            name === 'name' ? value : formData.name,
+            name === 'fatherName' ? value : formData.fatherName
+          );
+        } else if (name === 'name' && !value) {
+          setNameAvailable(null);
+        }
+      }
+    }
+  };
+
+  const checkNameAvailability = async (name: string, fatherName: string) => {
+    if (!name || !fatherName) return;
+    
+    setNameCheckLoading(true);
+    setNameAvailable(null);
+    
+    try {
+      const response = await fetch('/api/check-duplicates?name=' + encodeURIComponent(name));
+      const data = await response.json();
+      
+      if (data.success && data.profiles && data.profiles.length > 0) {
+        // Check if any profile has matching name AND father name
+        const exactMatch = data.profiles.some((p: { name: string; fatherName?: string }) => 
+          p.name.toLowerCase() === name.toLowerCase() && 
+          p.fatherName?.toLowerCase() === fatherName.toLowerCase()
+        );
+        
+        setNameAvailable(!exactMatch);
+      } else {
+        setNameAvailable(true);
+      }
+    } catch (error) {
+      console.error('Name check error:', error);
+      setNameAvailable(null);
+    } finally {
+      setNameCheckLoading(false);
     }
   };
 
@@ -363,34 +410,34 @@ export default function FormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50 py-4 sm:py-12 px-3 sm:px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Mobile-First Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <Link href="/" className="inline-flex items-right text-emerald-600 hover:text-emerald-500 mb-3 sm:mb-4 text-sm sm:text-base font-light tracking-wide">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-4 px-4">
+      <div className="max-w-md mx-auto">
+        {/* Mobile Header */}
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-flex items-center text-emerald-600 hover:text-emerald-700 mb-4 text-sm font-medium">
             ← Back to Home
           </Link>
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-sm">
-              <span className="text-white text-lg">💕</span>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-white text-xl">💕</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl text-gray-900 heading tracking-wide">PerfectPair</h1>
+            <h1 className="text-2xl font-bold text-gray-900">PerfectPair</h1>
           </div>
-          <h2 className="text-center text-xl sm:text-2xl text-gray-900 mb-2 heading">Create Your Profile</h2>
-          <p className="text-center text-sm sm:text-base font-light text-gray-600  tracking-wide">Join thousands who found their perfect match</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Create Your Profile</h2>
+          <p className="text-sm text-gray-600">Join thousands who found their perfect match</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-5 space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-light">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
               {error}
             </div>
           )}
 
           {/* Profile Submission Info */}
           <div>
-            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Profile Submission Details</h2>
-            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Submission Details</h2>
+            <div className="space-y-4">
               
               {/* Who is submitting this profile */}
               <div>
@@ -433,20 +480,47 @@ export default function FormPage() {
 
           {/* Mobile-First Personal Information */}
           <div>
-            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Personal Information</h2>
-            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
+            <div className="space-y-4">
               {/* Name Fields - 50/50 Layout */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className={inputClasses}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className={inputClasses}
+                    />
+                    {nameCheckLoading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="animate-spin h-4 w-4 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    {!nameCheckLoading && nameAvailable === true && formData.name && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500">
+                        ✓
+                      </div>
+                    )}
+                    {!nameCheckLoading && nameAvailable === false && formData.name && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500">
+                        ✗
+                      </div>
+                    )}
+                  </div>
+                  {!nameCheckLoading && nameAvailable === false && formData.name && (
+                    <p className="mt-1 text-xs text-red-600">
+                      Profile already exists with this name
+                    </p>
+                  )}
+                  {!nameCheckLoading && nameAvailable === true && formData.name && (
+                    <p className="mt-1 text-xs text-green-600">
+                      Name is available
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -463,7 +537,7 @@ export default function FormPage() {
               </div>
 
               {/* Gender and Cast - 50/50 Layout */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                   <select
@@ -717,7 +791,7 @@ export default function FormPage() {
               {/* Photo Upload Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {photoPreview ? (
                     <div className="space-y-4">
                       <div className="relative inline-block">
@@ -725,7 +799,7 @@ export default function FormPage() {
                         <img
                           src={photoPreview}
                           alt="Profile preview"
-                          className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-full mx-auto border-4 border-emerald-200"
+                          className="w-32 h-32 object-cover rounded-full mx-auto border-4 border-emerald-200"
                         />
                         <button
                           type="button"
@@ -748,9 +822,9 @@ export default function FormPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="text-4xl sm:text-6xl">📸</div>
+                      <div className="text-4xl">📸</div>
                       <div>
-                        <p className="text-sm sm:text-base text-gray-600 mb-2">Upload your profile photo</p>
+                        <p className="text-sm text-gray-600 mb-2">Upload your profile photo</p>
                         <p className="text-xs text-gray-500 mb-4">Maximum size: 5MB | Formats: JPG, PNG, GIF</p>
                         <label className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg cursor-pointer transition-all touch-manipulation font-light shadow-md hover:shadow-lg">
                           <input
@@ -771,8 +845,8 @@ export default function FormPage() {
 
           {/* Professional Information */}
           <div>
-            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Professional Information</h2>
-            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Professional Information</h2>
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Education *</label>
                 <select
@@ -1005,9 +1079,9 @@ export default function FormPage() {
 
           {/* Family & Contact Information */}
           <div>
-            <h2 className="text-lg sm:text-xl text-gray-900 mb-4 heading">Family & Contact Information</h2>
-            <div className="space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Family & Contact Information</h2>
+            <div className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Parents</label>
                   <div className="flex space-x-4">
@@ -1035,7 +1109,7 @@ export default function FormPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Brothers</label>
                   <div className="grid grid-cols-2 gap-4">
@@ -1210,6 +1284,19 @@ export default function FormPage() {
               </div>
               
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                <textarea
+                  name="address"
+                  rows={2}
+                  required
+                  placeholder="Enter your detailed address (e.g., House #123, Street 5, Area Name)"
+                  value={formData.address || ''}
+                  onChange={handleInputChange}
+                  className={textareaClasses}
+                />
+              </div>
+              
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                 <input
                   type="tel"
@@ -1225,8 +1312,8 @@ export default function FormPage() {
           </div>
 
           {/* Partner Requirements */}
-          <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-xl relative overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8">
-            <div className="px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-xl relative overflow-hidden -mx-5">
+            <div className="px-5 py-6">
             {/* Decorative Elements */}
             <div className="absolute top-0 right-0 w-20 h-20 bg-pink-100 rounded-full -translate-y-10 translate-x-10 opacity-50"></div>
             <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-100 rounded-full translate-y-8 -translate-x-8 opacity-50"></div>
@@ -1237,12 +1324,12 @@ export default function FormPage() {
                 <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-lg">💕</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Partner Requirements</h2>
+                <h2 className="text-lg font-bold text-gray-800">Partner Requirements</h2>
               </div>
               <p className="text-sm text-gray-600 ml-11">Tell us about your ideal life partner preferences</p>
             </div>
             
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 relative z-10">
+            <div className="space-y-4 relative z-10">
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <span className="text-pink-500">🎂</span>
@@ -2045,11 +2132,11 @@ export default function FormPage() {
           </div>
 
           {/* Submit Button */}
-          <div className="text-center pt-4 sm:pt-6">
+          <div className="text-center pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 sm:px-8 rounded-lg text-base sm:text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-light shadow-md hover:shadow-lg touch-manipulation"
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 active:from-emerald-600 active:to-teal-700 text-white px-6 py-3 rounded-lg text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95 touch-manipulation"
             >
               {loading ? (
                 <div className="flex items-center justify-center">

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Server-side cache for profiles list
+const profilesCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
+
 // Helper function to get single profile
 async function getSingleProfile(profileId: string) {
   try {
-    let useInMemory = false;
     let dbConnect, Profile, InMemoryStorage;
     
     try {
@@ -30,7 +33,6 @@ async function getSingleProfile(profileId: string) {
       
     } catch (dbError) {
       console.log('MongoDB fetch failed, using in-memory storage:', dbError);
-      useInMemory = true;
       
       try {
         const storageModule = await import('@/lib/storage');
@@ -78,6 +80,36 @@ export async function POST(request: NextRequest) {
     // FORCE MongoDB connection - no fallback for saving
     console.log('🔄 Attempting MongoDB connection...');
     
+    // Check for duplicate name and father name first
+    try {
+      const dbModule = await import('@/lib/mongodb');
+      const profileModule = await import('@/models/Profile');
+      
+      const dbConnect = dbModule.default;
+      const Profile = profileModule.default;
+      
+      await dbConnect();
+      
+      // Check if profile with same name AND father name already exists
+      const existingProfile = await Profile.findOne({ 
+        name: { $regex: new RegExp(`^${body.name}$`, 'i') },
+        fatherName: { $regex: new RegExp(`^${body.fatherName}$`, 'i') }
+      });
+      
+      if (existingProfile) {
+        console.log('⚠️ Duplicate profile detected:', body.name, 's/o', body.fatherName);
+        return NextResponse.json(
+          { 
+            error: `Profile already exists: "${body.name}" s/o "${body.fatherName}". Please verify the details or use a different name.`,
+            duplicate: true 
+          },
+          { status: 409 }
+        );
+      }
+    } catch (dupCheckError) {
+      console.log('⚠️ Could not check for duplicates, continuing...', dupCheckError);
+    }
+    
     try {
       const dbModule = await import('@/lib/mongodb');
       const profileModule = await import('@/models/Profile');
@@ -115,6 +147,7 @@ export async function POST(request: NextRequest) {
         houseType: body.houseType || "Family House",
         country: body.country || "Pakistan",
         city: body.city || "Karachi",
+        address: body.address || "",
         contactNumber: body.contactNumber,
         photoUrl: body.photoUrl || null,
         status: 'Active',
@@ -156,6 +189,10 @@ export async function POST(request: NextRequest) {
       } catch (syncError) {
         console.log('⚠️ Memory sync failed (non-critical):', syncError);
       }
+      
+      // Clear profiles cache since new profile was added
+      profilesCache.clear();
+      console.log('🗑️ Profiles cache cleared');
       
       return NextResponse.json(
         { 
@@ -273,6 +310,10 @@ export async function PUT(request: NextRequest) {
         console.log('⚠️ Memory sync failed (non-critical):', syncError);
       }
       
+      // Clear profiles cache since profile was updated
+      profilesCache.clear();
+      console.log('🗑️ Profiles cache cleared');
+      
       return NextResponse.json({
         message: 'Profile updated successfully',
         profile: updatedProfile,
@@ -321,6 +362,16 @@ export async function GET(request: NextRequest) {
     const profileId = searchParams.get('id');
     if (profileId) {
       return await getSingleProfile(profileId);
+    }
+    
+    // Create cache key from query params
+    const cacheKey = request.url;
+    
+    // Check cache first (only for list requests, not single profile)
+    const cached = profilesCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      console.log('✅ Returning cached profiles');
+      return NextResponse.json({ ...cached.data, cached: true });
     }
     
     const page = parseInt(searchParams.get('page') || '1');
@@ -379,14 +430,19 @@ export async function GET(request: NextRequest) {
       const total = allProfiles.length;
       const profiles = allProfiles.slice(skip, skip + limit);
       
-      return NextResponse.json({
+      const response = {
         profiles,
         pagination: {
           current: page,
           total: Math.ceil(total / limit),
           count: total,
         },
-      });
+      };
+      
+      // Cache the response
+      profilesCache.set(cacheKey, { data: response, timestamp: Date.now() });
+      
+      return NextResponse.json(response);
     } else {
       // Use MongoDB
       const filter: Record<string, unknown> = {};
@@ -433,18 +489,25 @@ export async function GET(request: NextRequest) {
       const profiles = await Profile.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean()
+        .select('-__v');
       
       const total = await Profile.countDocuments(filter);
       
-      return NextResponse.json({
+      const response = {
         profiles,
         pagination: {
           current: page,
           total: Math.ceil(total / limit),
           count: total,
         },
-      });
+      };
+      
+      // Cache the response
+      profilesCache.set(cacheKey, { data: response, timestamp: Date.now() });
+      
+      return NextResponse.json(response);
     }
   } catch (error) {
     console.error('Error fetching profiles:', error);

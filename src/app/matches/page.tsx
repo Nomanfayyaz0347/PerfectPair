@@ -57,31 +57,35 @@ function MatchesPageContent() {
   // SWR fetcher function
   const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-  // Use SWR for current profile
+  // Use SWR for current profile with aggressive caching
   const { data: profileData } = useSWR(
     profileId ? `/api/profiles?id=${profileId}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 30000, // Cache for 30 seconds
+      dedupingInterval: 300000, // Cache for 5 minutes
+      refreshInterval: 0, // Disable auto refresh
     }
   );
 
-  // Use SWR for matches with caching
-  const { data: matchesData, mutate: refreshMatches } = useSWR(
+  // Use SWR for matches with aggressive caching and immediate loading
+  const { data: matchesData, mutate: refreshMatches, isLoading: matchesLoading } = useSWR(
     profileId ? `/api/profiles/${profileId}/matches` : null,
     fetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 30000, // Cache for 30 seconds
+      dedupingInterval: 300000, // Cache for 5 minutes
+      refreshInterval: 0, // Disable auto refresh
+      suspense: false,
+      keepPreviousData: true, // Keep previous data while loading new
     }
   );
 
   const currentProfile = profileData?.profiles?.[0] || null;
   const matches = matchesData?.matches || [];
-  const loading = !matchesData && !profileData;
+  const loading = matchesLoading || (!profileId || (!matchesData && profileId));
 
   const [selectedMatch, setSelectedMatch] = useState<Profile | null>(null);
   const [showAllMatches, setShowAllMatches] = useState(false);
@@ -227,31 +231,30 @@ _Shared from PerfectPair - Marriage Bureau System_`;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100/50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* Header */}
       <header className="bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 sm:py-4">
+        <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link 
               href="/admin"
-              className="text-emerald-600 hover:text-emerald-700 flex items-center space-x-1 sm:space-x-2 flex-shrink-0"
+              className="text-emerald-600 active:text-emerald-700 flex items-center space-x-2 flex-shrink-0"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="font-light text-sm sm:text-base hidden sm:inline">Back to Dashboard</span>
-              <span className="font-light text-sm sm:hidden">Back</span>
+              <span className="text-sm">Back</span>
             </Link>
             
-            <div className="flex items-center space-x-3 min-w-0 flex-1 justify-end">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-                <span className="text-white text-lg">💕</span>
+            <div className="flex items-center space-x-2 min-w-0 flex-1 justify-end">
+              <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                <span className="text-white text-xl">💕</span>
               </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg text-gray-900 heading tracking-wide truncate">
+                <h1 className="text-base font-bold text-gray-900 truncate">
                   Matches for {profileName || 'Profile'}
                 </h1>
-                <p className="text-xs sm:text-sm font-light text-gray-600 tracking-wide">
+                <p className="text-xs text-gray-600">
                   Compatible profiles found
                 </p>
               </div>
@@ -260,7 +263,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-3 py-3 sm:px-6 lg:px-8 sm:py-6">
+      <div className="max-w-md mx-auto px-4 py-3">
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
@@ -635,7 +638,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
       {/* Match Profile Detail Modal */}
       {selectedMatch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-white/95 backdrop-blur-sm border border-gray-100 rounded-lg max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl border border-gray-100 max-w-md w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 p-2 sm:p-4 rounded-t-lg">
               <div className="flex items-center justify-between">
