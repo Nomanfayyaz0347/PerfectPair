@@ -1,14 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
   typescript: {
-    // Dangerously allow production builds to successfully complete even if
-    // your project has TypeScript errors.
     ignoreBuildErrors: false,
   },
-  typedRoutes: true,
-  turbopack: {
-    root: process.cwd(),
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  experimental: {
+    optimizePackageImports: ['@headlessui/react', '@heroicons/react'],
   },
 };
 

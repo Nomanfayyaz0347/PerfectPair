@@ -83,7 +83,16 @@ export default function AdminDashboard() {
   const router = useRouter();
   
   // SWR fetcher function
-  const fetcher = (url: string) => fetch(url).then(res => res.json());
+  const fetcher = async (url: string) => {
+    // Always use Vercel production API for local development
+    const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    const apiUrl = isDev ? `https://perfect-pair-delta.vercel.app${url}` : url;
+    console.log('Fetching from:', apiUrl);
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    console.log('API Response:', data);
+    return data;
+  };
   
   // Use SWR for profiles with caching
   const { data: profilesData, error: profilesError, mutate: refreshProfiles } = useSWR(
@@ -99,7 +108,8 @@ export default function AdminDashboard() {
   );
   
   const profiles = useMemo(() => {
-    return profilesData?.profiles || profilesData || [];
+    const data = profilesData?.profiles || profilesData || [];
+    return Array.isArray(data) ? data : [];
   }, [profilesData]);
   
   const loading = !profilesData && !profilesError;

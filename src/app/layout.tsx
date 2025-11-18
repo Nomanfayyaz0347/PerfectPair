@@ -6,7 +6,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 const georama = Georama({
   variable: "--font-georama",
   subsets: ["latin"],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  weight: ["400", "500", "600", "700"],
   display: 'swap',
 });
 
