@@ -5,9 +5,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
   experimental: {
     optimizePackageImports: ['@headlessui/react', '@heroicons/react'],
   },

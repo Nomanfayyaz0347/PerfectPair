@@ -1,10 +1,23 @@
 ﻿'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { useSession as _useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+
+// Force dynamic rendering so Next.js does not attempt to prerender and execute auth hooks server-side
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
+// Safe wrapper to avoid build-time crash when SessionProvider not yet mounted
+function safeUseSession() {
+  try {
+    return _useSession();
+  } catch {
+    return { data: null, status: 'unauthenticated' } as const;
+  }
+}
 
 interface Profile {
   _id: string;
@@ -79,7 +92,7 @@ interface ClientAccess {
 }
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = safeUseSession();
   const router = useRouter();
   
   // SWR fetcher function
