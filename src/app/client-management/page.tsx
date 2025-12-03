@@ -1,9 +1,13 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { useSession as _useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+
+// Force dynamic rendering - completely skip SSR
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 interface Client {
   _id: string;
@@ -29,7 +33,7 @@ interface Profile {
 }
 
 export default function ClientManagementPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = _useSession();
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -47,7 +51,7 @@ export default function ClientManagementPage() {
   useEffect(() => {
     if (status === 'loading') return;
 
-    if (!session || session.user.role !== 'admin') {
+    if (!session || (session.user as any)?.role !== 'admin') {
       router.push('/login');
       return;
     }
@@ -144,12 +148,27 @@ export default function ClientManagementPage() {
     profile => !clients.some(client => client.profileId._id === profile._id)
   );
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading data...</p>
         </div>
       </div>
     );
