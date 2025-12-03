@@ -347,7 +347,7 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                     <div className="bg-blue-50 border border-blue-100 rounded p-1.5 sm:p-2">
                       <div className="text-xs text-blue-600 font-medium mb-1 sm:mb-2">Found Matches:</div>
                       <div className="space-y-1 sm:space-y-2">
-                        {(showAllMatches ? matches : matches.slice(0, 3)).map((match: Profile, index: number) => {
+                        {(showAllMatches ? matches : matches.slice(0, 1)).map((match: Profile, index: number) => {
                           return (
                             <div key={match._id} className="bg-white border border-blue-200 rounded p-1 sm:p-1.5">
                               <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs mb-0.5 sm:mb-1">
@@ -408,14 +408,14 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                             </div>
                           );
                         })}
-                        {matches.length > 3 && (
+                        {matches.length > 1 && (
                           <button
                             onClick={() => setShowAllMatches(!showAllMatches)}
                             className="w-full text-xs text-blue-500 hover:text-blue-600 font-medium bg-white hover:bg-blue-50 rounded p-0.5 sm:p-1 text-center border border-blue-200 transition-colors"
                           >
                             {showAllMatches ? 
                               `Show Less` : 
-                              `+${matches.length - 3} more matches available`
+                              `+${matches.length - 1} more matches available`
                             }
                           </button>
                         )}

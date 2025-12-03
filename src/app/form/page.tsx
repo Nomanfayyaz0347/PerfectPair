@@ -31,7 +31,7 @@ interface FormData {
   color: string;
   cast: string;
   maslak: string;
-  maritalStatus: 'Single' | 'Divorced' | 'Widowed' | 'Separated';
+  maritalStatus: string;
   motherTongue: string;
   belongs: string;
   education: string;
@@ -44,7 +44,7 @@ interface FormData {
   numberOfMarriedBrothers: number;
   numberOfSisters: number;
   numberOfMarriedSisters: number;
-  houseType: 'Own House' | 'Rent' | 'Family House' | 'Apartment';
+  houseType: string;
   country: string;
   city: string;
   address?: string;
@@ -70,9 +70,9 @@ interface FormData {
 
 export default function FormPage() {
   // Improved input styling
-  const inputClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light";
+  const inputClasses = "w-full px-3 py-2.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light";
   const selectClasses = "w-full px-3 py-2.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white";
-  const textareaClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light resize-none";
+  const textareaClasses = "w-full px-3 py-2.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light resize-none";
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -129,6 +129,47 @@ export default function FormPage() {
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [showCustomCast, setShowCustomCast] = useState(false);
+  const [customCast, setCustomCast] = useState('');
+  const [showCustomMaslak, setShowCustomMaslak] = useState(false);
+  const [customMaslak, setCustomMaslak] = useState('');
+  const [showCustomMaritalStatus, setShowCustomMaritalStatus] = useState(false);
+  const [customMaritalStatus, setCustomMaritalStatus] = useState('');
+  const [showCustomMotherTongue, setShowCustomMotherTongue] = useState(false);
+  const [customMotherTongue, setCustomMotherTongue] = useState('');
+  const [showCustomBelongs, setShowCustomBelongs] = useState(false);
+  const [customBelongs, setCustomBelongs] = useState('');
+  const [showCustomComplexion, setShowCustomComplexion] = useState(false);
+  const [customComplexion, setCustomComplexion] = useState('');
+  const [showCustomEducation, setShowCustomEducation] = useState(false);
+  const [customEducation, setCustomEducation] = useState('');
+  const [showCustomOccupation, setShowCustomOccupation] = useState(false);
+  const [customOccupation, setCustomOccupation] = useState('');
+  const [showCustomHouseType, setShowCustomHouseType] = useState(false);
+  const [customHouseType, setCustomHouseType] = useState('');
+  const [showCustomCountry, setShowCustomCountry] = useState(false);
+  const [customCountry, setCustomCountry] = useState('');
+  const [showCustomCity, setShowCustomCity] = useState(false);
+  const [customCity, setCustomCity] = useState('');
+  
+  // Partner Requirements Custom Inputs
+  const [customReqCast, setCustomReqCast] = useState('');
+  const [customReqMaslak, setCustomReqMaslak] = useState('');
+  const [customReqMaritalStatus, setCustomReqMaritalStatus] = useState('');
+  const [customReqMotherTongue, setCustomReqMotherTongue] = useState('');
+  const [customReqBelongs, setCustomReqBelongs] = useState('');
+  const [customReqHouseType, setCustomReqHouseType] = useState('');
+  const [customReqLocation, setCustomReqLocation] = useState('');
+  const [customReqEducation, setCustomReqEducation] = useState('');
+  const [customReqOccupation, setCustomReqOccupation] = useState('');
+  const [customReqFamilyType, setCustomReqFamilyType] = useState('');
+  const [showCustomReqAgeRange, setShowCustomReqAgeRange] = useState(false);
+  const [customReqAgeMin, setCustomReqAgeMin] = useState('');
+  const [customReqAgeMax, setCustomReqAgeMax] = useState('');
+  const [showCustomReqHeightRange, setShowCustomReqHeightRange] = useState(false);
+  const [customReqHeightMin, setCustomReqHeightMin] = useState('');
+  const [customReqHeightMax, setCustomReqHeightMax] = useState('');
+  
   const [expandedSections, setExpandedSections] = useState({
     cast: false,
     maslak: false,
@@ -554,67 +595,110 @@ export default function FormPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Cast *</label>
-                  <select
-                    name="cast"
-                    required
-                    value={formData.cast}
-                    onChange={handleInputChange}
-                    className={selectClasses}
-                  >
-                    <option value="">Select Cast</option>
-                    {/* Major Casts */}
-                    <optgroup label="Major Casts">
-                      <option value="Rajput">Rajput</option>
-                      <option value="Jat">Jat</option>
-                      <option value="Gujjar">Gujjar</option>
-                      <option value="Awan">Awan</option>
-                      <option value="Arain">Arain</option>
-                      <option value="Sheikh">Sheikh</option>
-                      <option value="Malik">Malik</option>
-                      <option value="Chaudhary">Chaudhary</option>
-                    </optgroup>
-                    
-                    {/* Religious/Tribal */}
-                    <optgroup label="Religious/Tribal">
-                      <option value="Syed">Syed</option>
-                      <option value="Qureshi">Qureshi</option>
-                      <option value="Ansari">Ansari</option>
-                      <option value="Mughal">Mughal</option>
-                      <option value="Pathan">Pathan</option>
-                      <option value="Baloch">Baloch</option>
-                    </optgroup>
-                    
-                    {/* Professional/Occupational */}
-                    <optgroup label="Professional">
-                      <option value="Butt">Butt</option>
-                      <option value="Dar">Dar</option>
-                      <option value="Lone">Lone</option>
-                      <option value="Khan">Khan</option>
-                      <option value="Khatri">Khatri</option>
-                    </optgroup>
-                    
-                    {/* Others */}
-                    <optgroup label="Others">
-                      <option value="Kashmiri">Kashmiri</option>
-                      <option value="Punjabi">Punjabi</option>
-                      <option value="Sindhi">Sindhi</option>
-                      <option value="Other">Other</option>
-                    </optgroup>
-                  </select>
+                  {!showCustomCast ? (
+                    <select
+                      name="cast"
+                      required
+                      value={formData.cast}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setShowCustomCast(true);
+                          setFormData({ ...formData, cast: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      <option value="">Select Cast</option>
+                      {/* Major Casts */}
+                      <optgroup label="Major Casts">
+                        <option value="Rajput">Rajput</option>
+                        <option value="Jat">Jat</option>
+                        <option value="Gujjar">Gujjar</option>
+                        <option value="Awan">Awan</option>
+                        <option value="Arain">Arain</option>
+                        <option value="Sheikh">Sheikh</option>
+                        <option value="Malik">Malik</option>
+                        <option value="Chaudhary">Chaudhary</option>
+                      </optgroup>
+                      
+                      {/* Religious/Tribal */}
+                      <optgroup label="Religious/Tribal">
+                        <option value="Syed">Syed</option>
+                        <option value="Qureshi">Qureshi</option>
+                        <option value="Ansari">Ansari</option>
+                        <option value="Mughal">Mughal</option>
+                        <option value="Pathan">Pathan</option>
+                        <option value="Baloch">Baloch</option>
+                      </optgroup>
+                      
+                      {/* Professional/Occupational */}
+                      <optgroup label="Professional">
+                        <option value="Butt">Butt</option>
+                        <option value="Dar">Dar</option>
+                        <option value="Lone">Lone</option>
+                        <option value="Khan">Khan</option>
+                        <option value="Khatri">Khatri</option>
+                      </optgroup>
+                      
+                      {/* Others */}
+                      <optgroup label="Others">
+                        <option value="Kashmiri">Kashmiri</option>
+                        <option value="Punjabi">Punjabi</option>
+                        <option value="Sindhi">Sindhi</option>
+                        <option value="Other">Other (Custom)</option>
+                      </optgroup>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter your cast"
+                        required
+                        value={customCast}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomCast(value);
+                          setFormData({ ...formData, cast: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomCast(false);
+                          setCustomCast('');
+                          setFormData({ ...formData, cast: '' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Maslak (Religious Sect) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Maslak (Religious Sect) *</label>
-                <select
-                  name="maslak"
-                  required
-                  value={formData.maslak}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="">Select Maslak</option>
+                {!showCustomMaslak ? (
+                  <select
+                    name="maslak"
+                    required
+                    value={formData.maslak}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomMaslak(true);
+                        setFormData({ ...formData, maslak: '' });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
+                    className={selectClasses}
+                  >
+                    <option value="">Select Maslak</option>
                   
                   {/* Sunni Maslak */}
                   <optgroup label="Sunni Islam">
@@ -659,75 +743,209 @@ export default function FormPage() {
                     <option value="Sikh">Sikh</option>
                     <option value="Other Religion">Other Religion</option>
                   </optgroup>
-                </select>
+                  <option value="Other">Other (Custom)</option>
+                  </select>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter your maslak"
+                      required
+                      value={customMaslak}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomMaslak(value);
+                        setFormData({ ...formData, maslak: value });
+                      }}
+                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomMaslak(false);
+                        setCustomMaslak('');
+                        setFormData({ ...formData, maslak: '' });
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Marital Status */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Marital Status *</label>
-                <select
-                  name="maritalStatus"
-                  required
-                  value={formData.maritalStatus}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="Single">Single</option>
-                  <option value="Divorced">Divorced</option>
-                  <option value="Widowed">Widowed</option>
-                  <option value="Separated">Separated</option>
-                </select>
+                {!showCustomMaritalStatus ? (
+                  <select
+                    name="maritalStatus"
+                    required
+                    value={formData.maritalStatus}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomMaritalStatus(true);
+                        setFormData({ ...formData, maritalStatus: '' });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
+                    className={selectClasses}
+                  >
+                    <option value="Single">Single</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                    <option value="Separated">Separated</option>
+                    <option value="Other">Other (Custom)</option>
+                  </select>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter marital status"
+                      required
+                      value={customMaritalStatus}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomMaritalStatus(value);
+                        setFormData({ ...formData, maritalStatus: value });
+                      }}
+                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomMaritalStatus(false);
+                        setCustomMaritalStatus('');
+                        setFormData({ ...formData, maritalStatus: 'Single' });
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Mother Tongue *</label>
-                  <select
-                    name="motherTongue"
-                    required
-                    value={formData.motherTongue}
-                    onChange={handleInputChange}
-                    className={selectClasses}
-                  >
-                    <option value="Urdu">Urdu</option>
-                    <option value="English">English</option>
-                    <option value="Punjabi">Punjabi</option>
-                    <option value="Sindhi">Sindhi</option>
-                    <option value="Pashto">Pashto</option>
-                    <option value="Balochi">Balochi</option>
-                    <option value="Saraiki">Saraiki</option>
-                    <option value="Hindko">Hindko</option>
-                    <option value="Kashmiri">Kashmiri</option>
-                    <option value="Arabic">Arabic</option>
-                    <option value="Persian">Persian</option>
-                    <option value="Turkish">Turkish</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  {!showCustomMotherTongue ? (
+                    <select
+                      name="motherTongue"
+                      required
+                      value={formData.motherTongue}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setShowCustomMotherTongue(true);
+                          setFormData({ ...formData, motherTongue: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      <option value="Urdu">Urdu</option>
+                      <option value="English">English</option>
+                      <option value="Punjabi">Punjabi</option>
+                      <option value="Sindhi">Sindhi</option>
+                      <option value="Pashto">Pashto</option>
+                      <option value="Balochi">Balochi</option>
+                      <option value="Saraiki">Saraiki</option>
+                      <option value="Hindko">Hindko</option>
+                      <option value="Kashmiri">Kashmiri</option>
+                      <option value="Arabic">Arabic</option>
+                      <option value="Persian">Persian</option>
+                      <option value="Turkish">Turkish</option>
+                      <option value="Other">Other (Custom)</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter mother tongue"
+                        required
+                        value={customMotherTongue}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomMotherTongue(value);
+                          setFormData({ ...formData, motherTongue: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomMotherTongue(false);
+                          setCustomMotherTongue('');
+                          setFormData({ ...formData, motherTongue: 'Urdu' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Belongs *</label>
-                  <select
-                    name="belongs"
-                    required
-                    value={formData.belongs}
-                    onChange={handleInputChange}
-                    className={selectClasses}
-                  >
-                    <option value="Pakistan">Pakistan</option>
-                    <option value="Bangladesh">Bangladesh</option>
-                    <option value="India">India</option>
-                    <option value="Afghanistan">Afghanistan</option>
-                    <option value="Iran">Iran</option>
-                    <option value="Turkey">Turkey</option>
-                    <option value="Saudi Arabia">Saudi Arabia</option>
-                    <option value="UAE">UAE</option>
-                    <option value="UK">UK</option>
-                    <option value="USA">USA</option>
-                    <option value="Canada">Canada</option>
-                    <option value="Australia">Australia</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  {!showCustomBelongs ? (
+                    <select
+                      name="belongs"
+                      required
+                      value={formData.belongs}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setShowCustomBelongs(true);
+                          setFormData({ ...formData, belongs: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      <option value="Pakistan">Pakistan</option>
+                      <option value="Bangladesh">Bangladesh</option>
+                      <option value="India">India</option>
+                      <option value="Afghanistan">Afghanistan</option>
+                      <option value="Iran">Iran</option>
+                      <option value="Turkey">Turkey</option>
+                      <option value="Saudi Arabia">Saudi Arabia</option>
+                      <option value="UAE">UAE</option>
+                      <option value="UK">UK</option>
+                      <option value="USA">USA</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Australia">Australia</option>
+                      <option value="Other">Other (Custom)</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter country/region"
+                        required
+                        value={customBelongs}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomBelongs(value);
+                          setFormData({ ...formData, belongs: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomBelongs(false);
+                          setCustomBelongs('');
+                          setFormData({ ...formData, belongs: 'Pakistan' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -774,17 +992,52 @@ export default function FormPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Complexion</label>
-                  <select
-                    name="color"
-                    value={formData.color}
-                    onChange={handleInputChange}
-                    className={selectClasses}
-                  >
-                    <option value="">Select</option>
-                    <option value="Fair">Fair</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Dark">Dark</option>
-                  </select>
+                  {!showCustomComplexion ? (
+                    <select
+                      name="color"
+                      value={formData.color}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setShowCustomComplexion(true);
+                          setFormData({ ...formData, color: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      <option value="">Select</option>
+                      <option value="Fair">Fair</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Dark">Dark</option>
+                      <option value="Other">Other (Custom)</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter complexion"
+                        value={customComplexion}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomComplexion(value);
+                          setFormData({ ...formData, color: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomComplexion(false);
+                          setCustomComplexion('');
+                          setFormData({ ...formData, color: '' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -849,14 +1102,22 @@ export default function FormPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Education *</label>
-                <select
-                  name="education"
-                  required
-                  value={formData.education}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="">Select Education Level</option>
+                {!showCustomEducation ? (
+                  <select
+                    name="education"
+                    required
+                    value={formData.education}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomEducation(true);
+                        setFormData({ ...formData, education: '' });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
+                    className={selectClasses}
+                  >
+                    <option value="">Select Education Level</option>
                   
                   {/* School Level */}
                   <optgroup label="School Education">
@@ -910,22 +1171,57 @@ export default function FormPage() {
                     <option value="Dars-e-Nizami">Dars-e-Nizami</option>
                   </optgroup>
                   
-                  <option value="Other">Other</option>
+                  <option value="Other">Other (Custom)</option>
                 </select>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter your education"
+                      required
+                      value={customEducation}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomEducation(value);
+                        setFormData({ ...formData, education: value });
+                      }}
+                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomEducation(false);
+                        setCustomEducation('');
+                        setFormData({ ...formData, education: '' });
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {formData.gender === 'Male' ? 'Job/Business *' : 'Work/Occupation *'}
                 </label>
-                <select
-                  name="occupation"
-                  required
-                  value={formData.occupation}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="">Select {formData.gender === 'Male' ? 'Job/Business' : 'Work/Occupation'}</option>
+                {!showCustomOccupation ? (
+                  <select
+                    name="occupation"
+                    required
+                    value={formData.occupation}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomOccupation(true);
+                        setFormData({ ...formData, occupation: '' });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
+                    className={selectClasses}
+                  >
+                    <option value="">Select {formData.gender === 'Male' ? 'Job/Business' : 'Work/Occupation'}</option>
                   
                   {/* Professional Jobs (Both Genders) */}
                   <optgroup label="Professional Jobs">
@@ -995,9 +1291,36 @@ export default function FormPage() {
                     <option value="Student">Student</option>
                     <option value="Retired">Retired</option>
                     <option value="Unemployed">Unemployed</option>
-                    <option value="Other">Other</option>
+                    <option value="Other">Other (Custom)</option>
                   </optgroup>
                 </select>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter your occupation"
+                      required
+                      value={customOccupation}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomOccupation(value);
+                        setFormData({ ...formData, occupation: value });
+                      }}
+                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomOccupation(false);
+                        setCustomOccupation('');
+                        setFormData({ ...formData, occupation: '' });
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -1186,100 +1509,206 @@ export default function FormPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">House Type *</label>
-                <select
-                  name="houseType"
-                  required
-                  value={formData.houseType}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="Family House">Family House</option>
-                  <option value="Own House">Own House</option>
-                  <option value="Rent">Rent</option>
-                  <option value="Apartment">Apartment</option>
-                </select>
+                {!showCustomHouseType ? (
+                  <select
+                    name="houseType"
+                    required
+                    value={formData.houseType}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomHouseType(true);
+                        setFormData({ ...formData, houseType: '' });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
+                    className={selectClasses}
+                  >
+                    <option value="Family House">Family House</option>
+                    <option value="Own House">Own House</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="Other">Other (Custom)</option>
+                  </select>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter house type"
+                      required
+                      value={customHouseType}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomHouseType(value);
+                        setFormData({ ...formData, houseType: value });
+                      }}
+                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomHouseType(false);
+                        setCustomHouseType('');
+                        setFormData({ ...formData, houseType: '' });
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
-                  <select
-                    name="country"
-                    required
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    className={selectClasses}
-                  >
-                    <option value="Pakistan">Pakistan 🇵🇰</option>
-                    <option value="Bangladesh">Bangladesh 🇧🇩</option>
-                    <option value="India">India 🇮🇳</option>
-                    <option value="Afghanistan">Afghanistan 🇦🇫</option>
-                    <option value="Iran">Iran 🇮🇷</option>
-                    <option value="Turkey">Turkey 🇹🇷</option>
-                    <option value="Saudi Arabia">Saudi Arabia 🇸🇦</option>
-                    <option value="UAE">UAE 🇦🇪</option>
-                    <option value="UK">UK 🇬🇧</option>
-                    <option value="USA">USA 🇺🇸</option>
-                    <option value="Canada">Canada 🇨🇦</option>
-                    <option value="Australia">Australia 🇦🇺</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  {!showCustomCountry ? (
+                    <select
+                      name="country"
+                      required
+                      value={formData.country}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setShowCustomCountry(true);
+                          setFormData({ ...formData, country: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      <option value="Pakistan">Pakistan 🇵🇰</option>
+                      <option value="Bangladesh">Bangladesh 🇧🇩</option>
+                      <option value="India">India 🇮🇳</option>
+                      <option value="Afghanistan">Afghanistan 🇦🇫</option>
+                      <option value="Iran">Iran 🇮🇷</option>
+                      <option value="Turkey">Turkey 🇹🇷</option>
+                      <option value="Saudi Arabia">Saudi Arabia 🇸🇦</option>
+                      <option value="UAE">UAE 🇦🇪</option>
+                      <option value="UK">UK 🇬🇧</option>
+                      <option value="USA">USA 🇺🇸</option>
+                      <option value="Canada">Canada 🇨🇦</option>
+                      <option value="Australia">Australia 🇦🇺</option>
+                      <option value="Other">Other (Custom)</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter country"
+                        required
+                        value={customCountry}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomCountry(value);
+                          setFormData({ ...formData, country: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomCountry(false);
+                          setCustomCountry('');
+                          setFormData({ ...formData, country: 'Pakistan' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                  <select
-                    name="city"
-                    required
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className={selectClasses}
-                  >
-                    {/* Pakistan Cities */}
-                    <optgroup label="Pakistan 🇵🇰">
-                      <option value="Karachi">Karachi</option>
-                      <option value="Lahore">Lahore</option>
-                      <option value="Islamabad">Islamabad</option>
-                      <option value="Rawalpindi">Rawalpindi</option>
-                      <option value="Faisalabad">Faisalabad</option>
-                      <option value="Multan">Multan</option>
-                      <option value="Peshawar">Peshawar</option>
-                      <option value="Quetta">Quetta</option>
-                      <option value="Sialkot">Sialkot</option>
-                      <option value="Gujranwala">Gujranwala</option>
-                    </optgroup>
-                    
-                    {/* Bangladesh Cities */}
-                    <optgroup label="Bangladesh 🇧🇩">
-                      <option value="Dhaka">Dhaka</option>
-                      <option value="Chittagong">Chittagong</option>
-                      <option value="Sylhet">Sylhet</option>
-                      <option value="Rajshahi">Rajshahi</option>
-                      <option value="Khulna">Khulna</option>
-                    </optgroup>
-                    
-                    {/* India Cities */}
-                    <optgroup label="India 🇮🇳">
-                      <option value="Delhi">Delhi</option>
-                      <option value="Mumbai">Mumbai</option>
-                      <option value="Kolkata">Kolkata</option>
-                      <option value="Chennai">Chennai</option>
-                      <option value="Bangalore">Bangalore</option>
-                      <option value="Hyderabad">Hyderabad</option>
-                    </optgroup>
-                    
-                    {/* International Cities */}
-                    <optgroup label="International 🌍">
-                      <option value="London">London</option>
-                      <option value="New York">New York</option>
-                      <option value="Toronto">Toronto</option>
-                      <option value="Sydney">Sydney</option>
-                      <option value="Dubai">Dubai</option>
-                      <option value="Riyadh">Riyadh</option>
-                    </optgroup>
-                    
-                    <option value="Other">Other</option>
-                  </select>
+                  {!showCustomCity ? (
+                    <select
+                      name="city"
+                      required
+                      value={formData.city}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setShowCustomCity(true);
+                          setFormData({ ...formData, city: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      {/* Pakistan Cities */}
+                      <optgroup label="Pakistan 🇵🇰">
+                        <option value="Karachi">Karachi</option>
+                        <option value="Lahore">Lahore</option>
+                        <option value="Islamabad">Islamabad</option>
+                        <option value="Rawalpindi">Rawalpindi</option>
+                        <option value="Faisalabad">Faisalabad</option>
+                        <option value="Multan">Multan</option>
+                        <option value="Peshawar">Peshawar</option>
+                        <option value="Quetta">Quetta</option>
+                        <option value="Sialkot">Sialkot</option>
+                        <option value="Gujranwala">Gujranwala</option>
+                      </optgroup>
+                      
+                      {/* Bangladesh Cities */}
+                      <optgroup label="Bangladesh 🇧🇩">
+                        <option value="Dhaka">Dhaka</option>
+                        <option value="Chittagong">Chittagong</option>
+                        <option value="Sylhet">Sylhet</option>
+                        <option value="Rajshahi">Rajshahi</option>
+                        <option value="Khulna">Khulna</option>
+                      </optgroup>
+                      
+                      {/* India Cities */}
+                      <optgroup label="India 🇮🇳">
+                        <option value="Delhi">Delhi</option>
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Kolkata">Kolkata</option>
+                        <option value="Chennai">Chennai</option>
+                        <option value="Bangalore">Bangalore</option>
+                        <option value="Hyderabad">Hyderabad</option>
+                      </optgroup>
+                      
+                      {/* International Cities */}
+                      <optgroup label="International 🌍">
+                        <option value="London">London</option>
+                        <option value="New York">New York</option>
+                        <option value="Toronto">Toronto</option>
+                        <option value="Sydney">Sydney</option>
+                        <option value="Dubai">Dubai</option>
+                        <option value="Riyadh">Riyadh</option>
+                      </optgroup>
+                      
+                      <option value="Other">Other (Custom)</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter city"
+                        required
+                        value={customCity}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomCity(value);
+                          setFormData({ ...formData, city: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomCity(false);
+                          setCustomCity('');
+                          setFormData({ ...formData, city: '' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -1335,39 +1764,102 @@ export default function FormPage() {
                   <span className="text-pink-500">🎂</span>
                   Preferred Age Range
                 </label>
-                <select
-                  name="requirements.ageRange"
-                  value={`${formData.requirements.ageRange.min}-${formData.requirements.ageRange.max}`}
-                  onChange={(e) => {
-                    const [min, max] = e.target.value.split('-').map(Number);
-                    setFormData(prev => ({
-                      ...prev,
-                      requirements: {
-                        ...prev.requirements,
-                        ageRange: { min, max }
-                      }
-                    }));
-                  }}
-                  className={selectClasses}
-                >
-                  <option value="18-25">18 - 25 years</option>
-                  <option value="20-25">20 - 25 years</option>
-                  <option value="22-28">22 - 28 years</option>
-                  <option value="25-30">25 - 30 years</option>
-                  <option value="26-32">26 - 32 years</option>
-                  <option value="28-35">28 - 35 years</option>
-                  <option value="30-35">30 - 35 years</option>
-                  <option value="30-40">30 - 40 years</option>
-                  <option value="32-38">32 - 38 years</option>
-                  <option value="35-40">35 - 40 years</option>
-                  <option value="35-45">35 - 45 years</option>
-                  <option value="40-45">40 - 45 years</option>
-                  <option value="40-50">40 - 50 years</option>
-                  <option value="45-50">45 - 50 years</option>
-                  <option value="45-55">45 - 55 years</option>
-                  <option value="50-60">50 - 60 years</option>
-                  <option value="18-60">Any Age (18-60)</option>
-                </select>
+                {!showCustomReqAgeRange ? (
+                  <div className="flex gap-2">
+                    <select
+                      name="requirements.ageRange"
+                      value={`${formData.requirements.ageRange.min}-${formData.requirements.ageRange.max}`}
+                      onChange={(e) => {
+                        if (e.target.value === 'custom') {
+                          setShowCustomReqAgeRange(true);
+                          setCustomReqAgeMin(formData.requirements.ageRange.min.toString());
+                          setCustomReqAgeMax(formData.requirements.ageRange.max.toString());
+                        } else {
+                          const [min, max] = e.target.value.split('-').map(Number);
+                          setFormData(prev => ({
+                            ...prev,
+                            requirements: {
+                              ...prev.requirements,
+                              ageRange: { min, max }
+                            }
+                          }));
+                        }
+                      }}
+                      className={selectClasses}
+                    >
+                      <option value="18-25">18 - 25 years</option>
+                      <option value="20-25">20 - 25 years</option>
+                      <option value="22-28">22 - 28 years</option>
+                      <option value="25-30">25 - 30 years</option>
+                      <option value="26-32">26 - 32 years</option>
+                      <option value="28-35">28 - 35 years</option>
+                      <option value="30-35">30 - 35 years</option>
+                      <option value="30-40">30 - 40 years</option>
+                      <option value="32-38">32 - 38 years</option>
+                      <option value="35-40">35 - 40 years</option>
+                      <option value="35-45">35 - 45 years</option>
+                      <option value="40-45">40 - 45 years</option>
+                      <option value="40-50">40 - 50 years</option>
+                      <option value="45-50">45 - 50 years</option>
+                      <option value="45-55">45 - 55 years</option>
+                      <option value="50-60">50 - 60 years</option>
+                      <option value="18-60">Any Age (18-60)</option>
+                      <option value="custom">Custom Range</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="number"
+                        placeholder="Min age"
+                        value={customReqAgeMin}
+                        onChange={(e) => {
+                          setCustomReqAgeMin(e.target.value);
+                          if (e.target.value && customReqAgeMax) {
+                            setFormData(prev => ({
+                              ...prev,
+                              requirements: {
+                                ...prev.requirements,
+                                ageRange: { min: parseInt(e.target.value), max: parseInt(customReqAgeMax) }
+                              }
+                            }));
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400/50 focus:border-pink-400"
+                      />
+                      <span className="text-gray-500">to</span>
+                      <input
+                        type="number"
+                        placeholder="Max age"
+                        value={customReqAgeMax}
+                        onChange={(e) => {
+                          setCustomReqAgeMax(e.target.value);
+                          if (customReqAgeMin && e.target.value) {
+                            setFormData(prev => ({
+                              ...prev,
+                              requirements: {
+                                ...prev.requirements,
+                                ageRange: { min: parseInt(customReqAgeMin), max: parseInt(e.target.value) }
+                              }
+                            }));
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400/50 focus:border-pink-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomReqAgeRange(false);
+                        }}
+                        className="px-3 py-2 text-xs bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                        title="Back to dropdown"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -1375,34 +1867,95 @@ export default function FormPage() {
                   <span className="text-pink-500">📏</span>
                   Preferred Height Range
                 </label>
-                <select
-                  name="requirements.heightRange"
-                  value={`${formData.requirements.heightRange.min}-${formData.requirements.heightRange.max}`}
-                  onChange={(e) => {
-                    const [min, max] = e.target.value.split('-');
-                    setFormData(prev => ({
-                      ...prev,
-                      requirements: {
-                        ...prev.requirements,
-                        heightRange: { min, max }
+                {!showCustomReqHeightRange ? (
+                  <select
+                    name="requirements.heightRange"
+                    value={`${formData.requirements.heightRange.min}-${formData.requirements.heightRange.max}`}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setShowCustomReqHeightRange(true);
+                        setCustomReqHeightMin(formData.requirements.heightRange.min);
+                        setCustomReqHeightMax(formData.requirements.heightRange.max);
+                      } else {
+                        const [min, max] = e.target.value.split('-');
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            heightRange: { min, max }
+                          }
+                        }));
                       }
-                    }));
-                  }}
-                  className={selectClasses}
-                >
-                  <option value="4.5-5.2">4.5 - 5.2 feet (Short)</option>
-                  <option value="4.8-5.4">4.8 - 5.4 feet</option>
-                  <option value="5.0-5.6">5.0 - 5.6 feet (Average)</option>
-                  <option value="5.2-5.8">5.2 - 5.8 feet</option>
-                  <option value="5.4-6.0">5.4 - 6.0 feet (Tall)</option>
-                  <option value="5.6-6.2">5.6 - 6.2 feet</option>
-                  <option value="5.8-6.4">5.8 - 6.4 feet (Very Tall)</option>
-                  <option value="4.0-5.0">4.0 - 5.0 feet</option>
-                  <option value="5.0-5.5">5.0 - 5.5 feet</option>
-                  <option value="5.5-6.0">5.5 - 6.0 feet</option>
-                  <option value="6.0-6.5">6.0 - 6.5 feet</option>
-                  <option value="4.5-6.5">Any Height (4.5-6.5 feet)</option>
-                </select>
+                    }}
+                    className={selectClasses}
+                  >
+                    <option value="4.5-5.2">4.5 - 5.2 feet (Short)</option>
+                    <option value="4.8-5.4">4.8 - 5.4 feet</option>
+                    <option value="5.0-5.6">5.0 - 5.6 feet (Average)</option>
+                    <option value="5.2-5.8">5.2 - 5.8 feet</option>
+                    <option value="5.4-6.0">5.4 - 6.0 feet (Tall)</option>
+                    <option value="5.6-6.2">5.6 - 6.2 feet</option>
+                    <option value="5.8-6.4">5.8 - 6.4 feet (Very Tall)</option>
+                    <option value="4.0-5.0">4.0 - 5.0 feet</option>
+                    <option value="5.0-5.5">5.0 - 5.5 feet</option>
+                    <option value="5.5-6.0">5.5 - 6.0 feet</option>
+                    <option value="6.0-6.5">6.0 - 6.5 feet</option>
+                    <option value="4.5-6.5">Any Height (4.5-6.5 feet)</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        placeholder="Min (e.g., 5.0)"
+                        value={customReqHeightMin}
+                        onChange={(e) => {
+                          setCustomReqHeightMin(e.target.value);
+                          if (e.target.value && customReqHeightMax) {
+                            setFormData(prev => ({
+                              ...prev,
+                              requirements: {
+                                ...prev.requirements,
+                                heightRange: { min: e.target.value, max: customReqHeightMax }
+                              }
+                            }));
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400/50 focus:border-pink-400"
+                      />
+                      <span className="text-gray-500">to</span>
+                      <input
+                        type="text"
+                        placeholder="Max (e.g., 6.0)"
+                        value={customReqHeightMax}
+                        onChange={(e) => {
+                          setCustomReqHeightMax(e.target.value);
+                          if (customReqHeightMin && e.target.value) {
+                            setFormData(prev => ({
+                              ...prev,
+                              requirements: {
+                                ...prev.requirements,
+                                heightRange: { min: customReqHeightMin, max: e.target.value }
+                              }
+                            }));
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400/50 focus:border-pink-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomReqHeightRange(false);
+                        }}
+                        className="px-3 py-2 text-xs bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                        title="Back to dropdown"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -1410,46 +1963,85 @@ export default function FormPage() {
                   <span className="text-blue-500">🎓</span>
                   Preferred Education Level
                 </label>
-                <select
-                  name="requirements.education"
-                  value={formData.requirements.education}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="">Select Minimum Education</option>
-                  <option value="Any Education">Any Education Level</option>
-                  
-                  {/* Minimum Requirements */}
-                  <optgroup label="Minimum School Level">
-                    <option value="Matric or above">Matric (Class 10) or above</option>
-                    <option value="Intermediate or above">Intermediate (Class 12) or above</option>
-                    <option value="FSc or above">FSc or above</option>
-                  </optgroup>
-                  
-                  <optgroup label="Minimum Graduate Level">
-                    <option value="Bachelor or above">Bachelor&apos;s Degree or above</option>
-                    <option value="Graduate or above">Graduate or above</option>
-                    <option value="Professional Degree">Professional Degree (MBBS/Engineering)</option>
-                  </optgroup>
-                  
-                  <optgroup label="Minimum Master Level">
-                    <option value="Master or above">Master&apos;s Degree or above</option>
-                    <option value="MBA or above">MBA or above</option>
-                    <option value="MS or above">MS/MSc or above</option>
-                  </optgroup>
-                  
-                  <optgroup label="Professional Qualifications">
-                    <option value="CA/CMA">CA/CMA Qualified</option>
-                    <option value="Medical Professional">Medical Professional</option>
-                    <option value="Engineer">Engineer</option>
-                    <option value="PhD">PhD or equivalent</option>
-                  </optgroup>
-                  
-                  <optgroup label="Religious Education">
-                    <option value="Religious Education">Religious Education (Alim/Hafiz)</option>
-                    <option value="Both Religious & Modern">Both Religious & Modern Education</option>
-                  </optgroup>
-                </select>
+                {formData.requirements.education === 'Other' ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter custom education requirement"
+                      value={customReqEducation}
+                      onChange={(e) => {
+                        setCustomReqEducation(e.target.value);
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            education: e.target.value
+                          }
+                        }));
+                      }}
+                      className="w-full pr-10 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400/50 focus:border-blue-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            education: ''
+                          }
+                        }));
+                        setCustomReqEducation('');
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
+                      title="Back to dropdown"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    name="requirements.education"
+                    value={formData.requirements.education}
+                    onChange={handleInputChange}
+                    className={selectClasses}
+                  >
+                    <option value="">Select Minimum Education</option>
+                    <option value="Any Education">Any Education Level</option>
+                    
+                    {/* Minimum Requirements */}
+                    <optgroup label="Minimum School Level">
+                      <option value="Matric or above">Matric (Class 10) or above</option>
+                      <option value="Intermediate or above">Intermediate (Class 12) or above</option>
+                      <option value="FSc or above">FSc or above</option>
+                    </optgroup>
+                    
+                    <optgroup label="Minimum Graduate Level">
+                      <option value="Bachelor or above">Bachelor&apos;s Degree or above</option>
+                      <option value="Graduate or above">Graduate or above</option>
+                      <option value="Professional Degree">Professional Degree (MBBS/Engineering)</option>
+                    </optgroup>
+                    
+                    <optgroup label="Minimum Master Level">
+                      <option value="Master or above">Master&apos;s Degree or above</option>
+                      <option value="MBA or above">MBA or above</option>
+                      <option value="MS or above">MS/MSc or above</option>
+                    </optgroup>
+                    
+                    <optgroup label="Professional Qualifications">
+                      <option value="CA/CMA">CA/CMA Qualified</option>
+                      <option value="Medical Professional">Medical Professional</option>
+                      <option value="Engineer">Engineer</option>
+                      <option value="PhD">PhD or equivalent</option>
+                    </optgroup>
+                    
+                    <optgroup label="Religious Education">
+                      <option value="Religious Education">Religious Education (Alim/Hafiz)</option>
+                      <option value="Both Religious & Modern">Both Religious & Modern Education</option>
+                    </optgroup>
+                    <option value="Other">Other (Type below)</option>
+                  </select>
+                )}
               </div>
               
               <div>
@@ -1457,53 +2049,92 @@ export default function FormPage() {
                   <span className="text-green-500">💼</span>
                   Partner&apos;s Preferred Work/Job
                 </label>
-                <select
-                  name="requirements.occupation"
-                  value={formData.requirements.occupation}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="">Select Preferred Occupation</option>
-                  <option value="Any">Any Occupation</option>
-                  
-                  {/* Professional Jobs */}
-                  <optgroup label="Professional Jobs">
-                    <option value="Doctor">Doctor</option>
-                    <option value="Engineer">Engineer</option>
-                    <option value="Teacher">Teacher</option>
-                    <option value="Lawyer">Lawyer</option>
-                    <option value="Banker">Banker</option>
-                    <option value="Software Developer">Software Developer</option>
-                    <option value="Government Officer">Government Officer</option>
-                  </optgroup>
-
-                  {/* Business */}
-                  <optgroup label="Business">
-                    <option value="Business Owner">Business Owner</option>
-                    <option value="Trader">Trader</option>
-                    <option value="Self Employed">Self Employed</option>
-                  </optgroup>
-
-                  {/* If looking for female partner */}
-                  {formData.gender === 'Male' && (
-                    <optgroup label="For Female Partner">
-                      <option value="Working Woman">Working Woman</option>
-                      <option value="Housewife">Housewife</option>
-                      <option value="Home Based Work">Home Based Work</option>
-                      <option value="Part Time Job">Part Time Job</option>
+                {formData.requirements.occupation === 'Other' ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter custom occupation requirement"
+                      value={customReqOccupation}
+                      onChange={(e) => {
+                        setCustomReqOccupation(e.target.value);
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            occupation: e.target.value
+                          }
+                        }));
+                      }}
+                      className="w-full pr-10 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-400/50 focus:border-green-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            occupation: ''
+                          }
+                        }));
+                        setCustomReqOccupation('');
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
+                      title="Back to dropdown"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    name="requirements.occupation"
+                    value={formData.requirements.occupation}
+                    onChange={handleInputChange}
+                    className={selectClasses}
+                  >
+                    <option value="">Select Preferred Occupation</option>
+                    <option value="Any">Any Occupation</option>
+                    
+                    {/* Professional Jobs */}
+                    <optgroup label="Professional Jobs">
+                      <option value="Doctor">Doctor</option>
+                      <option value="Engineer">Engineer</option>
+                      <option value="Teacher">Teacher</option>
+                      <option value="Lawyer">Lawyer</option>
+                      <option value="Banker">Banker</option>
+                      <option value="Software Developer">Software Developer</option>
+                      <option value="Government Officer">Government Officer</option>
                     </optgroup>
-                  )}
 
-                  {/* If looking for male partner */}
-                  {formData.gender === 'Female' && (
-                    <optgroup label="For Male Partner">
-                      <option value="Good Job">Good Job</option>
-                      <option value="Government Job">Government Job</option>
-                      <option value="Business">Business</option>
-                      <option value="Professional">Professional</option>
+                    {/* Business */}
+                    <optgroup label="Business">
+                      <option value="Business Owner">Business Owner</option>
+                      <option value="Trader">Trader</option>
+                      <option value="Self Employed">Self Employed</option>
                     </optgroup>
-                  )}
-                </select>
+
+                    {/* If looking for female partner */}
+                    {formData.gender === 'Male' && (
+                      <optgroup label="For Female Partner">
+                        <option value="Working Woman">Working Woman</option>
+                        <option value="Housewife">Housewife</option>
+                        <option value="Home Based Work">Home Based Work</option>
+                        <option value="Part Time Job">Part Time Job</option>
+                      </optgroup>
+                    )}
+
+                    {/* If looking for male partner */}
+                    {formData.gender === 'Female' && (
+                      <optgroup label="For Male Partner">
+                        <option value="Good Job">Good Job</option>
+                        <option value="Government Job">Government Job</option>
+                        <option value="Business">Business</option>
+                        <option value="Professional">Professional</option>
+                      </optgroup>
+                    )}
+                    <option value="Other">Other (Type below)</option>
+                  </select>
+                )}
               </div>
               
               <div>
@@ -1511,17 +2142,56 @@ export default function FormPage() {
                   <span className="text-orange-500">🏠</span>
                   Preferred Family Type
                 </label>
-                <select
-                  name="requirements.familyType"
-                  value={formData.requirements.familyType}
-                  onChange={handleInputChange}
-                  className={selectClasses}
-                >
-                  <option value="">Select family type</option>
-                  <option value="Joint">Joint Family</option>
-                  <option value="Nuclear">Nuclear Family</option>
-                  <option value="Any">Any</option>
-                </select>
+                {formData.requirements.familyType === 'Other' ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter custom family type"
+                      value={customReqFamilyType}
+                      onChange={(e) => {
+                        setCustomReqFamilyType(e.target.value);
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            familyType: e.target.value
+                          }
+                        }));
+                      }}
+                      className="w-full pr-10 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400/50 focus:border-orange-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          requirements: {
+                            ...prev.requirements,
+                            familyType: ''
+                          }
+                        }));
+                        setCustomReqFamilyType('');
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
+                      title="Back to dropdown"
+                    >
+                      ↩️
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    name="requirements.familyType"
+                    value={formData.requirements.familyType}
+                    onChange={handleInputChange}
+                    className={selectClasses}
+                  >
+                    <option value="">Select family type</option>
+                    <option value="Joint">Joint Family</option>
+                    <option value="Nuclear">Nuclear Family</option>
+                    <option value="Any">Any</option>
+                    <option value="Other">Other (Type below)</option>
+                  </select>
+                )}
               </div>
               
               <div>
@@ -1580,6 +2250,39 @@ export default function FormPage() {
                           <span className="text-sm text-gray-700">{location}</span>
                         </label>
                       ))}
+                    </div>
+                    
+                    {/* Custom Location Input */}
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other Location (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom location"
+                          value={customReqLocation}
+                          onChange={(e) => setCustomReqLocation(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqLocation.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('location', customReqLocation.trim(), true);
+                              setCustomReqLocation('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400/50 focus:border-rose-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqLocation.trim()) {
+                              handleCheckboxChange('location', customReqLocation.trim(), true);
+                              setCustomReqLocation('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-rose-500 text-white rounded-lg hover:bg-rose-600"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1713,6 +2416,39 @@ export default function FormPage() {
                           />
                           Any Cast
                         </label>
+                      </div>
+                    </div>
+                    
+                    {/* Custom Cast Input */}
+                    <div>
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom cast"
+                          value={customReqCast}
+                          onChange={(e) => setCustomReqCast(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqCast.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('cast', customReqCast.trim(), true);
+                              setCustomReqCast('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqCast.trim()) {
+                              handleCheckboxChange('cast', customReqCast.trim(), true);
+                              setCustomReqCast('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                        >
+                          Add
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1867,6 +2603,39 @@ export default function FormPage() {
                         </label>
                       </div>
                     </div>
+                    
+                    {/* Custom Maslak Input */}
+                    <div>
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom maslak"
+                          value={customReqMaslak}
+                          onChange={(e) => setCustomReqMaslak(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqMaslak.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('maslak', customReqMaslak.trim(), true);
+                              setCustomReqMaslak('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400/50 focus:border-blue-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqMaslak.trim()) {
+                              handleCheckboxChange('maslak', customReqMaslak.trim(), true);
+                              setCustomReqMaslak('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1928,6 +2697,39 @@ export default function FormPage() {
                         />
                         Any House Type
                       </label>
+                    </div>
+                    
+                    {/* Custom House Type Input */}
+                    <div>
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom house type"
+                          value={customReqHouseType}
+                          onChange={(e) => setCustomReqHouseType(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqHouseType.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('houseType', customReqHouseType.trim(), true);
+                              setCustomReqHouseType('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400/50 focus:border-purple-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqHouseType.trim()) {
+                              handleCheckboxChange('houseType', customReqHouseType.trim(), true);
+                              setCustomReqHouseType('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1991,6 +2793,39 @@ export default function FormPage() {
                         Any Status
                       </label>
                     </div>
+                    
+                    {/* Custom Marital Status Input */}
+                    <div>
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom status"
+                          value={customReqMaritalStatus}
+                          onChange={(e) => setCustomReqMaritalStatus(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqMaritalStatus.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('maritalStatus', customReqMaritalStatus.trim(), true);
+                              setCustomReqMaritalStatus('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400/50 focus:border-orange-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqMaritalStatus.trim()) {
+                              handleCheckboxChange('maritalStatus', customReqMaritalStatus.trim(), true);
+                              setCustomReqMaritalStatus('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2053,6 +2888,39 @@ export default function FormPage() {
                         Any Language
                       </label>
                     </div>
+                    
+                    {/* Custom Mother Tongue Input */}
+                    <div>
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom language"
+                          value={customReqMotherTongue}
+                          onChange={(e) => setCustomReqMotherTongue(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqMotherTongue.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('motherTongue', customReqMotherTongue.trim(), true);
+                              setCustomReqMotherTongue('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-400/50 focus:border-green-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqMotherTongue.trim()) {
+                              handleCheckboxChange('motherTongue', customReqMotherTongue.trim(), true);
+                              setCustomReqMotherTongue('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2114,6 +2982,39 @@ export default function FormPage() {
                         />
                         Any Nationality
                       </label>
+                    </div>
+                    
+                    {/* Custom Nationality Input */}
+                    <div>
+                      <h4 className="font-medium text-gray-800 mb-2 text-sm">Other (Custom)</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom nationality"
+                          value={customReqBelongs}
+                          onChange={(e) => setCustomReqBelongs(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && customReqBelongs.trim()) {
+                              e.preventDefault();
+                              handleCheckboxChange('belongs', customReqBelongs.trim(), true);
+                              setCustomReqBelongs('');
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-400/50 focus:border-teal-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customReqBelongs.trim()) {
+                              handleCheckboxChange('belongs', customReqBelongs.trim(), true);
+                              setCustomReqBelongs('');
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

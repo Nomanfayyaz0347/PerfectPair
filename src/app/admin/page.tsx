@@ -97,19 +97,16 @@ export default function AdminDashboard() {
   
   // SWR fetcher function
   const fetcher = async (url: string) => {
-    // Always use Vercel production API for local development
-    const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-    const apiUrl = isDev ? `https://perfect-pair-delta.vercel.app${url}` : url;
-    console.log('Fetching from:', apiUrl);
-    const response = await fetch(apiUrl);
+    console.log('Fetching from:', url);
+    const response = await fetch(url);
     const data = await response.json();
     console.log('API Response:', data);
     return data;
   };
   
-  // Use SWR for profiles with caching
+  // Use SWR for profiles with caching - load only 50 initially for speed
   const { data: profilesData, error: profilesError, mutate: refreshProfiles } = useSWR(
-    session ? '/api/profiles?limit=1000' : null,
+    session ? '/api/profiles?limit=50&page=1' : null,
     fetcher,
     {
       revalidateOnFocus: false,    // Don't reload when tab changes
@@ -205,6 +202,11 @@ export default function AdminDashboard() {
   const [showClientDeleteConfirm, setShowClientDeleteConfirm] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<ClientAccess | null>(null);
   const [isDeletingClient, setIsDeletingClient] = useState(false);
+
+  // Image Modal States
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedImageName, setSelectedImageName] = useState<string>('');
 
   // Fetch clients data
   const { data: clientsData, error: clientsError, mutate: refreshClients } = useSWR(
@@ -898,7 +900,14 @@ export default function AdminDashboard() {
                               <img
                                 src={profile.photoUrl}
                                 alt={`${profile.name}'s photo`}
-                                className="w-14 h-14 object-cover rounded-full border-2 border-gray-200"
+                                className="w-14 h-14 object-cover rounded-full border-2 border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedImage(profile.photoUrl!);
+                                  setSelectedImageName(profile.name);
+                                  setShowImageModal(true);
+                                }}
+                                title="Click to view full image"
                               />
                             ) : (
                               <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center border-2 border-gray-300">
@@ -1219,7 +1228,14 @@ export default function AdminDashboard() {
                       <img
                         src={selectedProfile.photoUrl}
                         alt={`${selectedProfile.name}'s profile`}
-                        className="w-12 h-12 object-cover rounded-full border-2 border-emerald-300 shadow-sm"
+                        className="w-12 h-12 object-cover rounded-full border-2 border-emerald-300 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedImage(selectedProfile.photoUrl!);
+                          setSelectedImageName(selectedProfile.name);
+                          setShowImageModal(true);
+                        }}
+                        title="Click to view full image"
                       />
                     </div>
                   )}
@@ -1794,6 +1810,11 @@ export default function AdminDashboard() {
               <EditProfileFormAdmin 
                 editData={editData}
                 handleInputChange={handleInputChange}
+                onImageClick={(imageUrl, imageName) => {
+                  setSelectedImage(imageUrl);
+                  setSelectedImageName(imageName);
+                  setShowImageModal(true);
+                }}
               />
             </div>
             
@@ -2001,6 +2022,38 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 z-10 bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-lg"
+              title="Close"
+            >
+              ✕
+            </button>
+            <div className="bg-white rounded-lg shadow-2xl overflow-hidden max-w-full max-h-full">
+              <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800">{selectedImageName}</h3>
+              </div>
+              <div className="p-4 flex items-center justify-center bg-gray-50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedImage}
+                  alt={selectedImageName}
+                  className="max-w-full max-h-[70vh] object-contain rounded"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2008,10 +2061,12 @@ export default function AdminDashboard() {
 // Edit Profile Form Component for Admin
 function EditProfileFormAdmin({ 
   editData, 
-  handleInputChange
+  handleInputChange,
+  onImageClick
 }: {
   editData: Profile;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+  onImageClick: (imageUrl: string, imageName: string) => void;
 }) {
   const inputClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light";
   const selectClasses = "w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white";
@@ -2349,7 +2404,9 @@ function EditProfileFormAdmin({
                     <img
                       src={editData.photoUrl}
                       alt="Profile preview"
-                      className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-full mx-auto border-4 border-emerald-200"
+                      className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-full mx-auto border-4 border-emerald-200 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => onImageClick(editData.photoUrl!, editData.name)}
+                      title="Click to view full image"
                     />
                   </div>
                   <p className="text-sm text-gray-600">Current photo</p>

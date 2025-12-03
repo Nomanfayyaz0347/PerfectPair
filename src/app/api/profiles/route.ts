@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const gender = searchParams.get('gender');
     const limit = searchParams.get('limit');
     
-    let query: any = {};
+    const query: Record<string, unknown> = {};
     
     if (id) {
       query._id = id;

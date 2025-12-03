@@ -335,6 +335,15 @@ const ProfileSchema = new mongoose.Schema({
   timestamps: true, // This will add createdAt and updatedAt automatically
 });
 
+// Add indexes for faster queries
+ProfileSchema.index({ createdAt: -1 }); // For sorting by newest first
+ProfileSchema.index({ name: 1 }); // For name searches
+ProfileSchema.index({ age: 1 }); // For age filters
+ProfileSchema.index({ gender: 1 }); // For gender filters
+ProfileSchema.index({ status: 1 }); // For status filters
+ProfileSchema.index({ submittedBy: 1 }); // For submittedBy filters
+ProfileSchema.index({ name: 'text', occupation: 'text', education: 'text' }); // For text search
+
 const Profile = mongoose.models.Profile || mongoose.model<IProfile>('Profile', ProfileSchema);
 
 export default Profile;
