@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAdminAuth } from '@/lib/authCheck';
+import { deleteFromCloudinary } from '@/lib/cloudinary';
 
 interface RouteParams {
   params: Promise<{
@@ -11,10 +13,12 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
+    // Check admin authentication
+    const auth = await checkAdminAuth();
+    if (!auth.authenticated) return auth.response;
+    
     const resolvedParams = await params;
     const profileId = resolvedParams.id;
-    
-    console.log('🗑️ Delete request for profile ID:', profileId);
     
     // Try MongoDB first
     try {
@@ -29,16 +33,16 @@ export async function DELETE(
       // Check if profile exists
       const existingProfile = await Profile.findById(profileId);
       if (!existingProfile) {
-        console.log('❌ Profile not found:', profileId);
         return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
       }
       
-      console.log('📋 Found profile to delete:', existingProfile.name);
+      // Delete image from Cloudinary if exists
+      if (existingProfile.cloudinaryPublicId) {
+        await deleteFromCloudinary(existingProfile.cloudinaryPublicId);
+      }
       
       // Delete the profile
       await Profile.findByIdAndDelete(profileId);
-      
-      console.log('✅ Profile deleted successfully from MongoDB:', profileId);
       
       return NextResponse.json({ 
         success: true, 
@@ -49,16 +53,13 @@ export async function DELETE(
         }
       });
       
-    } catch (dbError) {
-      console.error('❌ MongoDB delete failed:', dbError);
-      
+    } catch {      
       // Fallback to in-memory storage
       try {
         const { InMemoryStorage } = await import('@/lib/storage');
         const success = await InMemoryStorage.deleteProfile(profileId);
         
         if (success) {
-          console.log('✅ Profile deleted from in-memory storage:', profileId);
           return NextResponse.json({ 
             success: true, 
             message: 'Profile deleted successfully',
@@ -67,14 +68,12 @@ export async function DELETE(
         } else {
           return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
         }
-      } catch (memError) {
-        console.error('❌ In-memory delete also failed:', memError);
+      } catch {
         return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 });
       }
     }
     
   } catch (error) {
-    console.error('❌ Error deleting profile:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

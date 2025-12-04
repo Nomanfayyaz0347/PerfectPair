@@ -1,8 +1,13 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
+// Ensure required environment variables are set
+if (!process.env.NEXTAUTH_SECRET) {
+  console.warn('⚠️ NEXTAUTH_SECRET is not set - using fallback (NOT SECURE FOR PRODUCTION)');
+}
+
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || 'default-secret-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET || 'perfectpair-dev-secret-change-in-production',
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -16,14 +21,17 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Simple admin authentication for production deployment
-          const defaultEmail = process.env.ADMIN_EMAIL || 'admin@matchmaker.com';
-          const defaultPassword = process.env.ADMIN_PASSWORD || 'securepassword';
+          // Admin authentication from environment variables (required)
+          const adminEmail = process.env.ADMIN_EMAIL;
+          const adminPassword = process.env.ADMIN_PASSWORD;
           
-          if (credentials.email === defaultEmail && credentials.password === defaultPassword) {
+          // Only allow env-based admin login if both are set
+          if (adminEmail && adminPassword && 
+              credentials.email === adminEmail && 
+              credentials.password === adminPassword) {
             return {
               id: 'admin-1',
-              email: defaultEmail,
+              email: adminEmail,
               name: 'Admin',
               role: 'admin',
             };
@@ -72,8 +80,7 @@ export const authOptions: NextAuthOptions = {
           }
           
           return null;
-        } catch (error) {
-          console.error('Auth error:', error);
+        } catch {
           return null;
         }
       }

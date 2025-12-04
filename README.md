@@ -2,7 +2,31 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### 1. Environment Setup
+
+Copy `.env.example` to `.env.local` and configure:
+
+```bash
+cp .env.example .env.local
+```
+
+Required environment variables:
+- `MONGODB_URI` - MongoDB connection string
+- `NEXTAUTH_SECRET` - NextAuth secret key
+- `NEXTAUTH_URL` - Application URL
+- `ADMIN_EMAIL` & `ADMIN_PASSWORD` - Admin credentials
+- **`CLOUDINARY_CLOUD_NAME`** - Cloudinary cloud name
+- **`CLOUDINARY_API_KEY`** - Cloudinary API key
+- **`CLOUDINARY_API_SECRET`** - Cloudinary API secret
+
+### 2. Cloudinary Setup
+
+1. Sign up at [Cloudinary](https://cloudinary.com) (free tier available)
+2. Go to Dashboard → Settings → Product Environment Credentials
+3. Copy your Cloud Name, API Key, and API Secret
+4. Add them to `.env.local`
+
+### 3. Run Development Server
 
 ```bash
 npm run dev
@@ -10,8 +34,6 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

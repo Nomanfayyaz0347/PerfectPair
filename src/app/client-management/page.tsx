@@ -73,7 +73,6 @@ export default function ClientManagementPage() {
       const profilesData = await profilesRes.json();
       setProfiles(profilesData.profiles || profilesData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
       setError('Failed to load data');
     } finally {
       setLoading(false);
@@ -104,7 +103,6 @@ export default function ClientManagementPage() {
       setShowCreateModal(false);
       fetchData();
     } catch (error) {
-      console.error('Error creating client:', error);
       setError('Failed to create client');
     }
   };
@@ -120,8 +118,8 @@ export default function ClientManagementPage() {
       if (res.ok) {
         fetchData();
       }
-    } catch (error) {
-      console.error('Error updating client:', error);
+    } catch {
+      // Error silently handled
     }
   };
 
@@ -138,7 +136,6 @@ export default function ClientManagementPage() {
         fetchData();
       }
     } catch (error) {
-      console.error('Error deleting client:', error);
       setError('Failed to delete client');
     }
   };

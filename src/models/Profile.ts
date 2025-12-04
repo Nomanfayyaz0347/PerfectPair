@@ -29,6 +29,7 @@ export interface IProfile extends mongoose.Document {
   address?: string;
   contactNumber: string;
   photoUrl?: string;
+  cloudinaryPublicId?: string;
   status?: 'Active' | 'Matched' | 'Engaged' | 'Married' | 'Inactive';
   matchedWith?: string;
   matchedDate?: Date;
@@ -218,6 +219,11 @@ const ProfileSchema = new mongoose.Schema({
     trim: true,
   },
   photoUrl: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  cloudinaryPublicId: {
     type: String,
     required: false,
     trim: true,

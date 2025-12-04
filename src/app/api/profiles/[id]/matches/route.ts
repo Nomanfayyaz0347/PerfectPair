@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAuth } from '@/lib/authCheck';
 
 // Simple in-memory cache for matches
 const matchesCache = new Map<string, { data: any; timestamp: number }>();
@@ -15,6 +16,10 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    // Check authentication
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.response;
+    
     const resolvedParams = await params;
     const profileId = resolvedParams.id;
     
@@ -448,9 +453,7 @@ export async function GET(
       try {
         const { InMemoryStorage } = await import('@/lib/storage');
         matches = await InMemoryStorage.findMatches(profileId);
-        console.log(`In-memory matches found: ${matches.length}`);
-      } catch (memError) {
-        console.error('In-memory matching also failed:', memError);
+      } catch {
         return NextResponse.json({ error: 'Failed to find matches' }, { status: 500 });
       }
     }
@@ -469,7 +472,6 @@ export async function GET(
     
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error finding matches:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

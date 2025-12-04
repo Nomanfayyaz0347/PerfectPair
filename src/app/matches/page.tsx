@@ -89,6 +89,8 @@ function MatchesPageContent() {
 
   const [selectedMatch, setSelectedMatch] = useState<Profile | null>(null);
   const [showAllMatches, setShowAllMatches] = useState(false);
+  const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
+  const [isCurrentProfileExpanded, setIsCurrentProfileExpanded] = useState(false);
 
   const fetchMatches = useCallback(async () => {
     // Use SWR's mutate to refresh data
@@ -273,17 +275,34 @@ _Shared from PerfectPair - Marriage Bureau System_`;
           <>
             {/* Current Profile - Enhanced Design */}
             {currentProfile && (
-              <div className={`bg-white border-2 border-emerald-200 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden mb-6 ${(currentProfile.status && currentProfile.status !== 'Active') ? 'opacity-40' : 'opacity-100'}`}>
-                {/* Compact Header */}
-                <div className="bg-gradient-to-r from-emerald-400 to-emerald-500 px-3 py-2">
+              <div className={`bg-white border-2 border-emerald-200 rounded-lg shadow-md transition-all duration-200 overflow-hidden mb-6 ${(currentProfile.status && currentProfile.status !== 'Active') ? 'opacity-40' : 'opacity-100'} ${isCurrentProfileExpanded ? 'shadow-lg border-emerald-300' : ''}`}>
+                {/* Header - Always Visible */}
+                <div 
+                  className="bg-gradient-to-r from-emerald-400 to-emerald-500 px-3 py-2 cursor-pointer hover:from-emerald-500 hover:to-emerald-600 transition-colors"
+                  onClick={() => setIsCurrentProfileExpanded(!isCurrentProfileExpanded)}
+                >
                   <div className="flex items-center justify-between">
-                    <h2 className="text-white font-medium text-xs">👤 Current Profile</h2>
-                    <span className="text-white text-xs">{matches.length} Matches</span>
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-white font-medium text-xs">👤 Current Profile</h2>
+                      <span className="text-white/90 text-xs">• {currentProfile.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-white text-xs">{matches.length} Matches</span>
+                      <svg 
+                        className={`w-4 h-4 text-white transition-transform duration-200 ${isCurrentProfileExpanded ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
                 
-                {/* Compact Profile Section */}
-                <div className="p-3">
+                {/* Expanded Content */}
+                {isCurrentProfileExpanded && (
+                <div className="p-3 border-t border-emerald-100">
                   <div className="flex items-center space-x-2 mb-3">
                     <div className="relative">
                       {currentProfile.photoUrl ? (
@@ -298,7 +317,6 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                           <span className="text-emerald-600 text-sm">👤</span>
                         </div>
                       )}
-
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-center mb-1">
@@ -318,8 +336,6 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                     </div>
                   </div>
 
-
-                  
                   {/* Compact Stats */}
                   <div className="flex justify-between items-center mb-3 text-xs">
                     <div className="bg-emerald-50 rounded px-2 py-1 border border-emerald-100">
@@ -335,94 +351,14 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                   </div>
 
                   {/* Looking For */}
-                  <div className="bg-emerald-50 border border-emerald-100 rounded p-2 mb-2">
+                  <div className="bg-emerald-50 border border-emerald-100 rounded p-2">
                     <div className="text-xs text-emerald-600 font-medium mb-1">Looking For:</div>
                     <div className="text-xs text-gray-700">
                       🎯 {currentProfile.requirements.ageRange.min}-{currentProfile.requirements.ageRange.max} years • 🎓 {currentProfile.requirements.education}
                     </div>
                   </div>
-
-                  {/* Matches Preview */}
-                  {matches.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-100 rounded p-1.5 sm:p-2">
-                      <div className="text-xs text-blue-600 font-medium mb-1 sm:mb-2">Found Matches:</div>
-                      <div className="space-y-1 sm:space-y-2">
-                        {(showAllMatches ? matches : matches.slice(0, 1)).map((match: Profile, index: number) => {
-                          return (
-                            <div key={match._id} className="bg-white border border-blue-200 rounded p-1 sm:p-1.5">
-                              <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs mb-0.5 sm:mb-1">
-                                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <span className="text-blue-600 text-xs font-medium">{index + 1}</span>
-                                </div>
-                                <div className="flex-1">
-                                  <span className="text-gray-800 font-medium">{match.name}</span>
-                                  <span className="text-gray-500 ml-1">({match.age}y)</span>
-                                </div>
-                              </div>
-                              <div className="text-xs ml-4 sm:ml-6 space-y-0.5 sm:space-y-1">
-                                {/* Match Score Badge */}
-                                {match.matchScore && (
-                                  <div className="inline-flex items-center px-1.5 py-0.5 sm:px-2 bg-green-100 text-green-700 rounded text-xs font-medium">
-                                    Score: {match.matchScore}
-                                  </div>
-                                )}
-                                
-                                {/* Matched Fields - Show All Fields */}
-                                {match.matchedFields && match.matchedFields.length > 0 ? (
-                                  <div className="space-y-0.5 sm:space-y-1">
-                                    <div className="text-green-600 font-medium text-xs">
-                                      ✅ Matched Fields ({match.matchedFields.length}):
-                                    </div>
-                                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                                      {match.matchedFields.map((field: string, fieldIndex: number) => {
-                                        // Add appropriate icons for different field types
-                                        const getFieldIcon = (fieldName: string) => {
-                                          if (fieldName.includes('Age')) return '🎂';
-                                          if (fieldName.includes('Height')) return '📏';
-                                          if (fieldName.includes('Education')) return '🎓';
-                                          if (fieldName.includes('Work') || fieldName.includes('Job')) return '💼';
-                                          if (fieldName.includes('Location')) return '📍';
-                                          if (fieldName.includes('Family') || fieldName.includes('Maslak')) return '👨‍👩‍👧‍👦';
-                                          if (fieldName.includes('Mother Tongue')) return '🗣️';
-                                          if (fieldName.includes('Nationality')) return '🏳️';
-                                          if (fieldName.includes('Marital')) return '💍';
-                                          if (fieldName.includes('House')) return '🏠';
-                                          if (fieldName.includes('Cast')) return '👥';
-                                          return '✅';
-                                        };
-                                        
-                                        return (
-                                          <span key={fieldIndex} className="inline-block px-1 py-0.5 sm:px-1.5 bg-green-50 text-green-700 rounded text-xs border border-green-200 font-medium">
-                                            {getFieldIcon(field)} {field}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-green-600 text-xs">
-                                    ✅ Compatible Profile
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {matches.length > 1 && (
-                          <button
-                            onClick={() => setShowAllMatches(!showAllMatches)}
-                            className="w-full text-xs text-blue-500 hover:text-blue-600 font-medium bg-white hover:bg-blue-50 rounded p-0.5 sm:p-1 text-center border border-blue-200 transition-colors"
-                          >
-                            {showAllMatches ? 
-                              `Show Less` : 
-                              `+${matches.length - 1} more matches available`
-                            }
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
+                )}
               </div>
             )}
 
@@ -460,36 +396,42 @@ _Shared from PerfectPair - Marriage Bureau System_`;
               </div>
             ) : (
               <div className="space-y-3">
-                {matches.map((match: Profile) => (
+                {matches.map((match: Profile) => {
+                  const isExpanded = expandedMatches[match._id] || false;
+                  
+                  return (
                   <div 
                     key={match._id} 
-                    className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${(match.status && match.status !== 'Active') ? 'opacity-40' : 'opacity-100'}`}
+                    className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden transition-all duration-200 ${(match.status && match.status !== 'Active') ? 'opacity-40' : 'opacity-100'} ${isExpanded ? 'shadow-md border-emerald-300' : ''}`}
                   >
-                    {/* Profile Section - Same as admin page */}
-                    <div className="p-3">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <div className="relative">
+                    {/* Header - Always Visible */}
+                    <div 
+                      className="p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setExpandedMatches(prev => ({ ...prev, [match._id]: !isExpanded }))}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="relative flex-shrink-0">
                           {match.photoUrl ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={match.photoUrl}
                               alt={`${match.name}'s photo`}
-                              className="w-14 h-14 object-cover rounded-full border-2 border-gray-200"
+                              className="w-12 h-12 object-cover rounded-full border-2 border-gray-200"
                             />
                           ) : (
-                            <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center border-2 border-gray-300">
-                              <span className="text-gray-500 text-lg">👤</span>
+                            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center border-2 border-gray-300">
+                              <span className="text-gray-500 text-base">👤</span>
                             </div>
                           )}
                           {/* Perfect Match badge */}
-                          <div className="absolute -top-1 -left-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">✨</span>
+                          <div className="absolute -top-1 -left-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-[10px] font-bold">✨</span>
                           </div>
                         </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{match.name}</h3>
-                            <span className={`text-xs sm:text-sm font-medium ${
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="text-base font-semibold text-gray-900 truncate">{match.name}</h3>
+                            <span className={`text-xs font-medium flex-shrink-0 ${
                               match.status === 'Active' ? 'text-green-500' :
                               match.status === 'Matched' ? 'text-blue-500' :
                               match.status === 'Engaged' ? 'text-purple-500' :
@@ -500,9 +442,26 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                               {match.status || 'Active'}
                             </span>
                           </div>
-                          <p className="text-xs sm:text-sm text-gray-500">s/o {match.fatherName}</p>
+                          <p className="text-xs text-gray-500 truncate">{match.age} years • {match.gender} • {match.matchScore || 'Perfect Match'}</p>
+                        </div>
+                        
+                        {/* Expand/Collapse Icon */}
+                        <div className="flex-shrink-0">
+                          <svg 
+                            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                    <div className="p-3 pt-2 border-t border-gray-100">
 
                       {/* Info Grid - Same as admin page */}
                       <div className="grid grid-cols-2 gap-x-2 gap-y-1 mb-2 border-b border-gray-100 pb-2">
@@ -627,8 +586,10 @@ _Shared from PerfectPair - Marriage Bureau System_`;
                         </div>
                       </div>
                     </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

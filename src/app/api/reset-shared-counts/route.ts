@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { checkAdminAuth } from '@/lib/authCheck';
 
 export async function POST() {
   try {
-    console.log('🔄 Resetting all profile shared counts...');
+    // Check admin authentication
+    const auth = await checkAdminAuth();
+    if (!auth.authenticated) return auth.response;
     
     const dbModule = await import('@/lib/mongodb');
     const profileModule = await import('@/models/Profile');
@@ -18,8 +21,6 @@ export async function POST() {
       { $set: { sharedCount: 0 } }
     );
     
-    console.log(`✅ Updated ${result.modifiedCount} profiles with sharedCount: 0`);
-    
     // Get count to verify
     const totalProfiles = await Profile.countDocuments();
     const profilesWithCount = await Profile.countDocuments({ sharedCount: { $exists: true } });
@@ -34,7 +35,6 @@ export async function POST() {
     });
 
   } catch (error: unknown) {
-    console.error('❌ Reset shared counts failed:', error);
     return NextResponse.json({
       error: 'Failed to reset shared counts',
       details: error instanceof Error ? error.message : String(error)

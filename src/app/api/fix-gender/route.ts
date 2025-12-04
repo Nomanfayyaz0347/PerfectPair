@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { checkAdminAuth } from '@/lib/authCheck';
 
 export async function POST() {
   try {
-    console.log('🔄 Starting gender field update for existing profiles...');
+    // Check admin authentication
+    const auth = await checkAdminAuth();
+    if (!auth.authenticated) return auth.response;
     
     const dbModule = await import('@/lib/mongodb');
     const profileModule = await import('@/models/Profile');
@@ -20,8 +23,6 @@ export async function POST() {
         { gender: '' }
       ]
     });
-    
-    console.log(`📊 Found ${profilesWithoutGender.length} profiles without gender`);
     
     let updatedCount = 0;
     
@@ -46,7 +47,6 @@ export async function POST() {
       });
       
       updatedCount++;
-      console.log(`✅ Updated ${profile.name} -> ${assignedGender}`);
     }
     
     return NextResponse.json({
@@ -59,7 +59,6 @@ export async function POST() {
     });
     
   } catch (error) {
-    console.error('❌ Error updating gender fields:', error);
     return NextResponse.json({
       error: 'Failed to update gender fields',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -99,7 +98,6 @@ export async function GET() {
     });
     
   } catch (error) {
-    console.error('Error getting gender stats:', error);
     return NextResponse.json({
       error: 'Failed to get statistics'
     }, { status: 500 });

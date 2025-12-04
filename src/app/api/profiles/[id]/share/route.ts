@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Profile from '@/models/Profile';
+import { checkAuth } from '@/lib/authCheck';
 
 // POST /api/profiles/[id]/share - Increment share count
 export async function POST(
@@ -8,6 +9,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.response;
+    
     const { id: profileId } = await params;
     
     if (!profileId) {
@@ -38,8 +43,6 @@ export async function POST(
       );
     }
 
-    console.log(`✅ Share count incremented for profile ${profileId}: ${profile.sharedCount}`);
-
     return NextResponse.json({
       success: true,
       message: 'Share count updated successfully',
@@ -49,7 +52,6 @@ export async function POST(
     });
 
   } catch (error: unknown) {
-    console.error('❌ Error updating share count:', error);
     return NextResponse.json(
       {
         error: 'Failed to update share count',
@@ -95,7 +97,6 @@ export async function GET(
     });
 
   } catch (error: unknown) {
-    console.error('❌ Error getting share count:', error);
     return NextResponse.json(
       {
         error: 'Failed to get share count',

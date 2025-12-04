@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Profile from '@/models/Profile';
+import { checkAuth } from '@/lib/authCheck';
+import { profileSchema, profileUpdateSchema } from '@/lib/validations';
+import { ZodError } from 'zod';
 
-// GET - Fetch profiles
+// GET - Fetch profiles (requires login)
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.response;
+    
     await dbConnect();
     
     const { searchParams } = new URL(request.url);
@@ -33,7 +40,6 @@ export async function GET(request: NextRequest) {
       count: profiles.length
     });
   } catch (error) {
-    console.error('Error fetching profiles:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch profiles' },
       { status: 500 }
@@ -41,20 +47,36 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new profile
+// POST - Create new profile (public - no auth required for form submissions)
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
     const body = await request.json();
-    const profile = await Profile.create(body);
+    
+    // Validate input with Zod
+    const validatedData = profileSchema.parse(body);
+    
+    const profile = await Profile.create(validatedData);
     
     return NextResponse.json({
       success: true,
       profile
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating profile:', error);
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Validation failed',
+          details: error.issues.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to create profile' },
       { status: 500 }
@@ -62,13 +84,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update profile
+// PUT - Update profile (requires login)
 export async function PUT(request: NextRequest) {
   try {
+    // Check authentication
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.response;
+    
     await dbConnect();
     
     const body = await request.json();
     const { profileId, _id, ...updateData } = body;
+    
+    // Validate update data with Zod
+    const validatedData = profileUpdateSchema.parse(updateData);
     
     const id = profileId || _id;
     
@@ -81,7 +110,7 @@ export async function PUT(request: NextRequest) {
     
     const profile = await Profile.findByIdAndUpdate(
       id,
-      updateData,
+      validatedData,
       { new: true, runValidators: true }
     );
     
@@ -97,7 +126,19 @@ export async function PUT(request: NextRequest) {
       profile
     });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Validation failed',
+          details: error.issues.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to update profile' },
       { status: 500 }

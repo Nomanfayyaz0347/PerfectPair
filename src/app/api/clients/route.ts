@@ -34,7 +34,6 @@ export async function GET() {
 
     return NextResponse.json({ clients });
   } catch (error) {
-    console.error('Error fetching clients:', error);
     return NextResponse.json(
       { error: 'Failed to fetch clients' },
       { status: 500 }
@@ -116,7 +115,6 @@ export async function POST(req: NextRequest) {
       client: clientData
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating client:', error);
     return NextResponse.json(
       { error: 'Failed to create client' },
       { status: 500 }
@@ -161,7 +159,6 @@ export async function DELETE(req: NextRequest) {
       message: 'Client deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting client:', error);
     return NextResponse.json(
       { error: 'Failed to delete client' },
       { status: 500 }
@@ -210,7 +207,6 @@ export async function PATCH(req: NextRequest) {
       client
     });
   } catch (error) {
-    console.error('Error updating client:', error);
     return NextResponse.json(
       { error: 'Failed to update client' },
       { status: 500 }

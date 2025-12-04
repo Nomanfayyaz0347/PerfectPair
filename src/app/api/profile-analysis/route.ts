@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { checkAdminAuth } from '@/lib/authCheck';
 
 export async function GET() {
   try {
-    console.log('📋 Checking all profiles data...');
+    // Check admin authentication
+    const auth = await checkAdminAuth();
+    if (!auth.authenticated) return auth.response;
     
     const dbModule = await import('@/lib/mongodb');
     const profileModule = await import('@/models/Profile');
@@ -20,8 +23,6 @@ export async function GET() {
       requirements: 1,
       _id: 1
     }).lean();
-    
-    console.log(`Found ${allProfiles.length} profiles`);
     
     const analysis = {
       totalProfiles: allProfiles.length,
@@ -81,7 +82,6 @@ export async function GET() {
     });
     
   } catch (error) {
-    console.error('❌ Profile check error:', error);
     return NextResponse.json({
       error: 'Failed to check profiles',
       details: error instanceof Error ? error.message : 'Unknown error'

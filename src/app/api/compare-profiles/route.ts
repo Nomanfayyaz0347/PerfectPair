@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Profile from '@/models/Profile';
+import { checkAuth } from '@/lib/authCheck';
 
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.response;
+    
     const searchParams = request.nextUrl.searchParams;
     const profile1Name = searchParams.get('profile1');
     const profile2Name = searchParams.get('profile2');
@@ -364,7 +369,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in compare-profiles:', error);
     return NextResponse.json({
       error: 'Internal server error'
     }, { status: 500 });

@@ -68,7 +68,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking duplicates:', error);
     return NextResponse.json(
       { 
         success: false, 
@@ -108,7 +107,6 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error deleting duplicate:', error);
     return NextResponse.json(
       { 
         success: false, 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkAdminAuth } from '@/lib/authCheck';
 
 interface Profile {
   _id: string;
@@ -24,7 +25,10 @@ interface Profile {
 
 export async function POST() {
   try {
-    console.log('🔄 Starting data sync between storage systems...');
+    // Check admin authentication
+    const auth = await checkAdminAuth();
+    if (!auth.authenticated) return auth.response;
+    
     // @ts-ignore - Temporarily disable for deployment
 
     let mongoProfiles: Profile[] = [];
@@ -45,10 +49,8 @@ export async function POST() {
       
       await dbConnect();
       mongoProfiles = await Profile.find({});
-      console.log(`✅ Found ${mongoProfiles.length} profiles in MongoDB`);
       
     } catch (dbError) {
-      console.log('❌ Could not access MongoDB:', dbError);
       syncResults.errors.push('MongoDB access failed');
     }
 
@@ -57,10 +59,8 @@ export async function POST() {
       const storageModule = await import('@/lib/storage');
       const { getProfiles } = storageModule;
       memoryProfiles = getProfiles();
-      console.log(`✅ Found ${memoryProfiles.length} profiles in memory`);
       
     } catch (storageError) {
-      console.log('❌ Could not access in-memory storage:', storageError);
       syncResults.errors.push('In-memory storage access failed');
     }
 
@@ -96,16 +96,12 @@ export async function POST() {
             
             updateProfile(mongoProfile._id.toString(), profileData as any);
             syncResults.mongoToMemory++;
-          } catch (error) {
-            console.error(`Error syncing profile ${mongoProfile.name}:`, error);
+          } catch {
             syncResults.errors.push(`Failed to sync ${mongoProfile.name} to memory`);
           }
         }
         
-        console.log(`✅ Synced ${syncResults.mongoToMemory} profiles from MongoDB to memory`);
-        
       } catch (syncError) {
-        console.error('MongoDB to memory sync failed:', syncError);
         syncResults.errors.push('MongoDB to memory sync failed');
       }
     }
@@ -126,16 +122,12 @@ export async function POST() {
             const profile = new Profile(memoryProfile);
             await profile.save();
             syncResults.memoryToMongo++;
-          } catch (error) {
-            console.error(`Error syncing profile ${memoryProfile.name}:`, error);
+          } catch {
             syncResults.errors.push(`Failed to sync ${memoryProfile.name} to MongoDB`);
           }
         }
         
-        console.log(`✅ Synced ${syncResults.memoryToMongo} profiles from memory to MongoDB`);
-        
-      } catch (syncError) {
-        console.error('Memory to MongoDB sync failed:', syncError);
+      } catch {
         syncResults.errors.push('Memory to MongoDB sync failed');
       }
     }
@@ -152,7 +144,6 @@ export async function POST() {
     });
 
   } catch (error) {
-    console.error('❌ Sync operation failed:', error);
     return NextResponse.json(
       { 
         error: 'Sync failed', 

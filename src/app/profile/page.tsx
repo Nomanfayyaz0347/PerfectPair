@@ -160,7 +160,6 @@ function ProfilePageContent() {
         setMessage({ type: 'error', text: data.error || 'Failed to update profile' });
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
       setMessage({ type: 'error', text: 'Error updating profile' });
     } finally {
       setSaving(false);
@@ -196,7 +195,6 @@ function ProfilePageContent() {
         setMessage({ type: 'error', text: errorData.error || 'Failed to delete profile' });
       }
     } catch (error) {
-      console.error('Error deleting profile:', error);
       setMessage({ type: 'error', text: 'Error deleting profile' });
     } finally {
       setIsDeleting(false);

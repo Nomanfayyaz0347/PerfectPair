@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
       message: 'Database connection test successful'
     });
   } catch (error) {
-    console.error('Database connection error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to connect to database' },
       { status: 500 }

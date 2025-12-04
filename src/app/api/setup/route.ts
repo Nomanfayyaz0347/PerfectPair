@@ -11,7 +11,6 @@ export async function POST() {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Setup error:', error);
     return NextResponse.json(
       { error: 'Failed to setup admin user' },
       { status: 500 }
@@ -34,7 +33,6 @@ export async function GET() {
       adminCount: defaultAdmin ? 1 : 0
     });
   } catch (error) {
-    console.error('Setup check error:', error);
     return NextResponse.json(
       { error: 'Failed to check setup status' },
       { status: 500 }

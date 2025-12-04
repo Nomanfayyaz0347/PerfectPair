@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,57 +29,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if we're in production/live environment
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+    // Convert file to buffer
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    if (isProduction) {
-      // For production, convert to base64 and return
-      // This is a temporary solution - ideally use cloud storage
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const base64 = buffer.toString('base64');
-      const photoUrl = `data:${file.type};base64,${base64}`;
-      
+    // Upload to Cloudinary
+    const uploadResult = await uploadToCloudinary(buffer, 'perfect-pair/profiles');
+
+    if (!uploadResult.success) {
       return NextResponse.json(
-        { 
-          message: 'Photo uploaded successfully',
-          photoUrl: photoUrl
-        },
-        { status: 200 }
-      );
-    } else {
-      // Local development - save to file system
-      // Create uploads directory if it doesn't exist
-      const uploadsDir = join(process.cwd(), 'public', 'uploads');
-      if (!existsSync(uploadsDir)) {
-        await mkdir(uploadsDir, { recursive: true });
-      }
-
-      // Generate unique filename
-      const timestamp = Date.now();
-      const fileExtension = file.name.split('.').pop();
-      const filename = `profile-${timestamp}.${fileExtension}`;
-      const filepath = join(uploadsDir, filename);
-
-      // Convert file to buffer and save
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filepath, buffer);
-
-      // Return the public URL
-      const photoUrl = `/uploads/${filename}`;
-      
-      return NextResponse.json(
-        { 
-          message: 'Photo uploaded successfully',
-          photoUrl: photoUrl
-        },
-        { status: 200 }
+        { error: uploadResult.error || 'Failed to upload photo' },
+        { status: 500 }
       );
     }
 
+    return NextResponse.json(
+      { 
+        message: 'Photo uploaded successfully',
+        photoUrl: uploadResult.url,
+        publicId: uploadResult.publicId,
+      },
+      { status: 200 }
+    );
+
   } catch (error) {
-    console.error('Photo upload error:', error);
+    console.error('Upload error:', error);
     return NextResponse.json(
       { error: 'Failed to upload photo. Please try again.' },
       { status: 500 }

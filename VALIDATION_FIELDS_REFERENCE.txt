@@ -1,0 +1,39 @@
+// Quick Reference: Form fields that need validation error display
+// Add {validationErrors['fieldName'] && <p className="mt-1 text-xs text-red-600">{validationErrors['fieldName']}</p>}
+// after each input/select/textarea
+
+const fieldsToUpdate = [
+  'name',           // Already done
+  'fatherName',     // Already done
+  'gender',
+  'age',
+  'height',
+  'weight',
+  'color',
+  'cast',
+  'maslak',
+  'maritalStatus',
+  'motherTongue',
+  'belongs',
+  'education',
+  'occupation',
+  'country',
+  'city',
+  'contactNumber',
+  'requirements.ageRange.min',
+  'requirements.ageRange.max',
+  'requirements.heightRange.min',
+  'requirements.heightRange.max',
+];
+
+// Pattern to add after each field:
+/*
+{validationErrors['fieldName'] && (
+  <p className="mt-1 text-xs text-red-600">
+    {validationErrors['fieldName']}
+  </p>
+)}
+*/
+
+// Also replace className={inputClasses} with className={getInputClasses('fieldName')}
+// Also replace className={selectClasses} with className={getSelectClasses('fieldName')}
