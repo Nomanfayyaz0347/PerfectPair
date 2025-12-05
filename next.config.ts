@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['@headlessui/react', '@heroicons/react'],
   },
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 export default nextConfig;

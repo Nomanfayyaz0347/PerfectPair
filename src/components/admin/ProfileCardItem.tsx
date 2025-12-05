@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Profile, getProfileId, getSharedCount } from './types';
 
@@ -24,6 +24,31 @@ export default function ProfileCard({
   onImageClick
 }: ProfileCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [localMatchCount, setLocalMatchCount] = useState<number | null>(null);
+  
+  // Fallback: fetch individual match count if not provided
+  useEffect(() => {
+    const profileId = getProfileId(profile);
+    if (profileMatches[profileId] === undefined && (profile.status === 'Active' || !profile.status)) {
+      fetch(`/api/profiles/${profileId}/matches`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.matches) {
+            setLocalMatchCount(data.matches.length);
+          }
+        })
+        .catch(() => setLocalMatchCount(0));
+    }
+  }, [profile, profileMatches]);
+  
+  // Get match count - prefer prop, fallback to local fetch
+  const getMatchCount = () => {
+    const profileId = getProfileId(profile);
+    if (profileMatches[profileId] !== undefined) {
+      return profileMatches[profileId];
+    }
+    return localMatchCount;
+  };
 
   return (
     <div 
@@ -55,9 +80,13 @@ export default function ProfileCard({
             )}
             {(profile.status === 'Active' || !profile.status) && (
               <div className="absolute -top-1 -left-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">
-                  {profileMatches[getProfileId(profile)] || 0}
-                </span>
+                {getMatchCount() !== null ? (
+                  <span className="text-white text-[10px] font-bold">
+                    {getMatchCount()}
+                  </span>
+                ) : (
+                  <span className="text-white text-[8px]">•••</span>
+                )}
               </div>
             )}
           </div>
@@ -136,7 +165,10 @@ export default function ProfileCard({
             <span className="text-xs font-medium text-emerald-600">Matches:</span>
             <span className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200">
               {(profile.status === 'Active' || !profile.status) ? 
-                <span className="font-medium text-emerald-600">{profileMatches[getProfileId(profile)] || 0}</span> : 
+                (getMatchCount() !== null ?
+                  <span className="font-medium text-emerald-600">{getMatchCount()}</span> :
+                  <span className="text-gray-400">...</span>
+                ) : 
                 <span className="text-gray-500">Inactive</span>
               }
             </span>

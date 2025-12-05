@@ -90,32 +90,8 @@ export default function AdminDashboard() {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   
-  // Cache match counts - persist in localStorage with expiry
-  const [profileMatches, setProfileMatches] = useState<Record<string, number>>(() => {
-    // Load from localStorage on mount
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('profileMatchCounts');
-      const cacheTime = localStorage.getItem('profileMatchCounts_timestamp');
-      
-      if (cached && cacheTime) {
-        try {
-          const timestamp = parseInt(cacheTime);
-          const now = Date.now();
-          // Cache valid for 30 seconds - shorter to catch new matches faster
-          if (now - timestamp < 30 * 1000) {
-            return JSON.parse(cached);
-          } else {
-            // Cache expired, clear it
-            localStorage.removeItem('profileMatchCounts');
-            localStorage.removeItem('profileMatchCounts_timestamp');
-          }
-        } catch {
-          return {};
-        }
-      }
-    }
-    return {};
-  });
+  // Cache match counts - will be loaded from API
+  const [profileMatches, setProfileMatches] = useState<Record<string, number>>({});
   
   // Save to localStorage whenever profileMatches changes
   useEffect(() => {
@@ -216,10 +192,13 @@ export default function AdminDashboard() {
         try {
           JSON.parse(responseText);
           
-          // Clear match counts cache when status changes
+          // Clear match counts cache when status changes - local and server
           setProfileMatches({});
           localStorage.removeItem('profileMatchCounts');
           localStorage.removeItem('profileMatchCounts_timestamp');
+          
+          // Clear server cache
+          fetch('/api/profiles/match-counts', { method: 'POST' }).catch(() => {});
           
           // Refresh profiles to show updated status
           await fetchProfiles();
@@ -268,47 +247,46 @@ export default function AdminDashboard() {
       return;
     }
     
-    // Load match counts when profiles are loaded (only once per session)
-    // Use longer delay and larger batches for better perceived performance
-    if (profiles.length > 0 && Object.keys(profileMatches).length === 0) {
-      const activeProfiles = profiles.filter((p: Profile) => p.status === 'Active' || !p.status);
+    // Load all match counts in a single API call
+    if (profiles.length > 0) {
+      // Check if we already have cached data that's valid
+      const cached = localStorage.getItem('profileMatchCounts');
+      const cacheTime = localStorage.getItem('profileMatchCounts_timestamp');
       
-      // Batch load match counts with delays to prevent server overload
-      setTimeout(async () => {
-        const batchSize = 5; // Increased batch size from 3 to 5
-        for (let i = 0; i < activeProfiles.length; i += batchSize) {
-          const batch = activeProfiles.slice(i, i + batchSize);
-          
-          // Parallel fetch for this batch
-          const batchPromises = batch.map(async (profile: Profile) => {
-            try {
-              const profileId = getProfileId(profile);
-              const response = await fetch(`/api/profiles/${profileId}/matches`);
-              
-              if (response.ok) {
-                const data = await response.json();
-                return { profileId, count: data.matches?.length || 0 };
-              }
-              return { profileId, count: 0 };
-            } catch {
-              return { profileId: getProfileId(profile), count: 0 };
+      if (cached && cacheTime) {
+        const timestamp = parseInt(cacheTime);
+        const now = Date.now();
+        // If cache is valid (< 2 minutes), use it
+        if (now - timestamp < 2 * 60 * 1000) {
+          try {
+            const cachedData = JSON.parse(cached);
+            if (Object.keys(cachedData).length > 0) {
+              setProfileMatches(cachedData);
+              return;
             }
-          });
-          
-          const results = await Promise.all(batchPromises);
-          
-          // Update state progressively for better UX
-          setProfileMatches(prev => ({
-            ...prev,
-            ...Object.fromEntries(results.map(r => [r.profileId, r.count]))
-          }));
-          
-          // Reduced delay between batches from 200ms to 100ms
-          if (i + batchSize < activeProfiles.length) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch {
+            // Invalid cache, continue to fetch
           }
         }
-      }, 500); // Reduced initial delay from 1000ms to 500ms
+      }
+      
+      // Fetch fresh match counts
+      (async () => {
+        try {
+          const response = await fetch('/api/profiles/match-counts');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.matchCounts && Object.keys(data.matchCounts).length > 0) {
+              setProfileMatches(data.matchCounts);
+              // Save to localStorage
+              localStorage.setItem('profileMatchCounts', JSON.stringify(data.matchCounts));
+              localStorage.setItem('profileMatchCounts_timestamp', Date.now().toString());
+            }
+          }
+        } catch {
+          // Error loading match counts - will show ... in UI
+        }
+      })();
     }
   }, [session, status, router, profiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
