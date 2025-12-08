@@ -149,30 +149,30 @@ export default function ProfileSlider() {
 
                 {/* Profile Info */}
                 <div className="p-3">
-                  <h3 className="text-xs font-bold text-gray-800 mb-0.5">{profile.name}</h3>
-                  <p className="text-[10px] text-gray-500 mb-2">📍 {profile.city}</p>
+                  <h3 className="text-sm font-bold text-gray-800 mb-1">{profile.name}</h3>
+                  <p className="text-xs text-gray-500 mb-2">📍 {profile.city}</p>
                   
                   <div className="space-y-1.5 mb-3">
-                    <div className="flex items-center text-[10px] text-gray-600">
-                      <span className="w-16 font-medium">Education:</span>
+                    <div className="flex items-center text-xs text-gray-600">
+                      <span className="w-20 font-medium">Education:</span>
                       <span className="flex-1 truncate">{profile.education}</span>
                     </div>
-                    <div className="flex items-center text-[10px] text-gray-600">
-                      <span className="w-16 font-medium">Work:</span>
+                    <div className="flex items-center text-xs text-gray-600">
+                      <span className="w-20 font-medium">Work:</span>
                       <span className="flex-1 truncate">{profile.occupation}</span>
                     </div>
                   </div>
 
                   {/* Requirements */}
                   <div className="border-t border-gray-100 pt-2">
-                    <p className="text-[10px] font-semibold text-gray-700 mb-1.5">Looking For:</p>
+                    <p className="text-xs font-semibold text-gray-700 mb-1.5">Looking For:</p>
                     <div className="space-y-1">
-                      <div className="flex items-center text-[10px] text-gray-600">
+                      <div className="flex items-center text-xs text-gray-600">
                         <span className="mr-1.5">🎂</span>
                         <span>{profile.requirements.ageRange.min}-{profile.requirements.ageRange.max} years</span>
                       </div>
                       {profile.requirements.education && (
-                        <div className="flex items-center text-[10px] text-gray-600">
+                        <div className="flex items-center text-xs text-gray-600">
                           <span className="mr-1.5">🎓</span>
                           <span className="truncate">{profile.requirements.education}</span>
                         </div>
@@ -182,7 +182,7 @@ export default function ProfileSlider() {
 
                   {/* View Profile Button */}
                   <Link href="/profiles">
-                    <button className="w-full mt-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white py-1.5 rounded-lg text-xs font-medium hover:from-teal-600 hover:to-emerald-600 transition-all">
+                    <button className="w-full mt-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white py-2 rounded-lg text-sm font-medium hover:from-teal-600 hover:to-emerald-600 transition-all">
                       View All Profiles
                     </button>
                   </Link>
