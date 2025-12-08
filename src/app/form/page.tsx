@@ -1,25 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-
-const locationOptions = [
-  // Pakistan Cities
-  'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 
-  'Multan', 'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala',
-  
-  // Bangladesh Cities  
-  'Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna',
-  
-  // India Cities
-  'Delhi', 'Mumbai', 'Kolkata', 'Chennai', 'Bangalore', 'Hyderabad',
-  
-  // International Cities
-  'London', 'New York', 'Toronto', 'Sydney', 'Dubai', 'Riyadh',
-  
-  // Options
-  'Same City', 'Any'
-];
+import BottomNavigation from '@/components/BottomNavigation';
 
 interface FormData {
   name: string;
@@ -111,7 +94,7 @@ export default function FormPage() {
     weight: '50',
     color: 'Fair',
     cast: 'Syed',
-    maslak: 'Sunni - Hanafi',
+    maslak: 'Hanafi',
     maritalStatus: 'Single',
     motherTongue: 'Urdu',
     belongs: 'Pakistan',
@@ -149,6 +132,10 @@ export default function FormPage() {
     }
   });
 
+  // Multi-step form state
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -168,8 +155,6 @@ export default function FormPage() {
   const [customMotherTongue, setCustomMotherTongue] = useState('');
   const [showCustomBelongs, setShowCustomBelongs] = useState(false);
   const [customBelongs, setCustomBelongs] = useState('');
-  const [showCustomComplexion, setShowCustomComplexion] = useState(false);
-  const [customComplexion, setCustomComplexion] = useState('');
   const [showCustomEducation, setShowCustomEducation] = useState(false);
   const [customEducation, setCustomEducation] = useState('');
   const [showCustomOccupation, setShowCustomOccupation] = useState(false);
@@ -192,6 +177,9 @@ export default function FormPage() {
   const [customReqEducation, setCustomReqEducation] = useState('');
   const [customReqOccupation, setCustomReqOccupation] = useState('');
   const [customReqFamilyType, setCustomReqFamilyType] = useState('');
+  const [showCustomReqEducation, setShowCustomReqEducation] = useState(false);
+  const [showCustomReqOccupation, setShowCustomReqOccupation] = useState(false);
+  const [showCustomReqFamilyType, setShowCustomReqFamilyType] = useState(false);
   const [showCustomReqAgeRange, setShowCustomReqAgeRange] = useState(false);
   const [customReqAgeMin, setCustomReqAgeMin] = useState('');
   const [customReqAgeMax, setCustomReqAgeMax] = useState('');
@@ -215,6 +203,28 @@ export default function FormPage() {
       [section]: !prev[section]
     }));
   };
+
+  // Auto-save form data to localStorage
+  useEffect(() => {
+    const savedData = localStorage.getItem('formDraft');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setFormData(parsed);
+      } catch (e) {
+        console.error('Error loading saved form data:', e);
+      }
+    }
+  }, []);
+
+  // Save form data whenever it changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem('formDraft', JSON.stringify(formData));
+    }, 1000); // Debounce for 1 second
+    
+    return () => clearTimeout(timer);
+  }, [formData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -320,6 +330,15 @@ export default function FormPage() {
   };
 
   const handleCheckboxChange = (fieldName: 'cast' | 'maslak' | 'maritalStatus' | 'motherTongue' | 'belongs' | 'houseType' | 'location', value: string, checked: boolean) => {
+    // Clear validation error for this field
+    if (fieldName === 'cast' || fieldName === 'maritalStatus') {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+    
     setFormData(prev => ({
       ...prev,
       requirements: {
@@ -341,8 +360,148 @@ export default function FormPage() {
     }
   };
 
+  // Multi-step navigation functions
+  const validateCurrentStep = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (currentStep === 1) {
+      // Step 1: Personal Information
+      if (!formData.submittedBy) errors.submittedBy = 'Please select who is submitting';
+      if (formData.submittedBy === 'Partner Matchmaker' && !formData.matchmakerName) {
+        errors.matchmakerName = 'Matchmaker name is required';
+      }
+      if (!formData.name || formData.name.trim() === '') errors.name = 'Full name is required';
+      if (!formData.fatherName || formData.fatherName.trim() === '') errors.fatherName = "Father's name is required";
+      if (!formData.gender) errors.gender = 'Gender is required';
+      if (!formData.cast || formData.cast.trim() === '') errors.cast = 'Cast is required';
+      if (!formData.maritalStatus || formData.maritalStatus.trim() === '') errors.maritalStatus = 'Marital status is required';
+      if (!formData.motherTongue || formData.motherTongue.trim() === '') errors.motherTongue = 'Mother tongue is required';
+      if (!formData.belongs || formData.belongs.trim() === '') errors.belongs = 'Belongs is required';
+      if (!formData.age || formData.age < 18 || formData.age > 80) errors.age = 'Valid age (18-80) is required';
+      
+      // Check if name is available
+      if (nameAvailable === false) {
+        errors.name = 'Profile already exists with this name and father name';
+      }
+    } else if (currentStep === 2) {
+      // Step 2: Physical Details & Education
+      if (!formData.education || formData.education.trim() === '') errors.education = 'Education is required';
+      if (!formData.occupation || formData.occupation.trim() === '') errors.occupation = 'Job/Business is required';
+    } else if (currentStep === 3) {
+      // Step 3: Family & Contact
+      if (!formData.houseType || formData.houseType.trim() === '') errors.houseType = 'House type is required';
+      if (!formData.country || formData.country.trim() === '') errors.country = 'Country is required';
+      if (!formData.city || formData.city.trim() === '') errors.city = 'City is required';
+      if (!formData.address || formData.address.trim() === '') errors.address = 'Address is required';
+      if (!formData.contactNumber || formData.contactNumber.trim() === '') errors.contactNumber = 'Contact number is required';
+    } else if (currentStep === 4) {
+      // Step 4: Partner Requirements
+      if (!formData.requirements.ageRange.min || !formData.requirements.ageRange.max) {
+        errors.ageRange = 'Preferred age range is required';
+      }
+      if (!formData.requirements.education || formData.requirements.education.trim() === '') {
+        errors.education = 'Preferred education level is required';
+      }
+      if (!formData.requirements.cast || formData.requirements.cast.length === 0) {
+        errors.cast = 'At least one preferred cast is required';
+      }
+      if (!formData.requirements.maritalStatus || formData.requirements.maritalStatus.length === 0) {
+        errors.maritalStatus = 'At least one preferred marital status is required';
+      }
+    }
+    
+    setValidationErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return false;
+    }
+    
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateCurrentStep() && currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+      setValidationErrors({}); // Clear errors when moving to next step
+      // Auto-save on step change
+      localStorage.setItem('formDraft', JSON.stringify(formData));
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+      window.scrollTo(0, 0);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Only allow submission on Step 4
+    if (currentStep < totalSteps) {
+      return;
+    }
+    
+    // Validate current step before submission
+    if (!validateCurrentStep()) {
+      return;
+    }
+    
+    // Additional validation - check all required fields across all steps
+    const allErrors: Record<string, string> = {};
+    
+    // Step 1 required fields
+    if (!formData.submittedBy) allErrors.submittedBy = 'Required';
+    if (formData.submittedBy === 'Partner Matchmaker' && !formData.matchmakerName) allErrors.matchmakerName = 'Required';
+    if (!formData.name?.trim()) allErrors.name = 'Required';
+    if (!formData.fatherName?.trim()) allErrors.fatherName = 'Required';
+    if (!formData.gender) allErrors.gender = 'Required';
+    if (!formData.cast?.trim()) allErrors.cast = 'Required';
+    if (!formData.maritalStatus?.trim()) allErrors.maritalStatus = 'Required';
+    if (!formData.motherTongue?.trim()) allErrors.motherTongue = 'Required';
+    if (!formData.belongs?.trim()) allErrors.belongs = 'Required';
+    if (!formData.age || formData.age < 18) allErrors.age = 'Required';
+    
+    // Step 2 required fields
+    if (!formData.education?.trim()) allErrors.education = 'Required';
+    if (!formData.occupation?.trim()) allErrors.occupation = 'Required';
+    
+    // Step 3 required fields
+    if (!formData.houseType?.trim()) allErrors.houseType = 'Required';
+    if (!formData.country?.trim()) allErrors.country = 'Required';
+    if (!formData.city?.trim()) allErrors.city = 'Required';
+    if (!formData.address?.trim()) allErrors.address = 'Required';
+    if (!formData.contactNumber?.trim()) allErrors.contactNumber = 'Required';
+    
+    if (Object.keys(allErrors).length > 0) {
+      setValidationErrors(allErrors);
+      const missingFieldsList = Object.keys(allErrors).join(', ');
+      setError(`❌ Please fill all required fields: ${missingFieldsList}`);
+      
+      // Go to first step with error
+      if (allErrors.name || allErrors.fatherName || allErrors.gender || allErrors.cast || 
+          allErrors.maritalStatus || allErrors.motherTongue || allErrors.belongs || allErrors.age || 
+          allErrors.submittedBy) {
+        setCurrentStep(1);
+      } else if (allErrors.education || allErrors.occupation) {
+        setCurrentStep(2);
+      } else if (allErrors.houseType || allErrors.country || allErrors.city || 
+                 allErrors.address || allErrors.contactNumber) {
+        setCurrentStep(3);
+      }
+      
+      window.scrollTo(0, 0);
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
@@ -389,7 +548,8 @@ export default function FormPage() {
       if (!profileData.matchmakerName) delete profileData.matchmakerName;
       if (!profileData.status) delete profileData.status;
 
-      // Submitting profile data
+      // Log the data being sent for debugging
+      console.log('Submitting profile data:', profileData);
 
       const response = await fetch('/api/profiles', {
         method: 'POST',
@@ -403,6 +563,8 @@ export default function FormPage() {
         // Clear match counts cache so fresh data loads on admin page
         localStorage.removeItem('profileMatchCounts');
         localStorage.removeItem('profileMatchCounts_timestamp');
+        // Clear saved draft after successful submission
+        localStorage.removeItem('formDraft');
         
         setSuccess(true);
         setFormData({
@@ -414,7 +576,7 @@ export default function FormPage() {
           weight: '50',
           color: 'Fair',
           cast: 'Syed',
-          maslak: 'Sunni - Hanafi',
+          maslak: 'Hanafi',
           maritalStatus: 'Single',
           motherTongue: 'Urdu',
           belongs: 'Pakistan',
@@ -453,29 +615,79 @@ export default function FormPage() {
         setPhotoPreview(null);
       } else {
         const errorData = await response.json();
+        console.log('API Error Response:', errorData);
         
         // Handle validation errors
         if (errorData.details && Array.isArray(errorData.details)) {
           const errors: Record<string, string> = {};
+          const missingFields: string[] = [];
+          
           errorData.details.forEach((err: { field: string; message: string }) => {
             errors[err.field] = err.message;
+            
+            // Get field label in Urdu/English for better understanding
+            const fieldLabels: Record<string, string> = {
+              name: 'Full Name',
+              fatherName: "Father's Name",
+              gender: 'Gender',
+              age: 'Age',
+              cast: 'Cast',
+              maritalStatus: 'Marital Status',
+              motherTongue: 'Mother Tongue',
+              belongs: 'Belongs',
+              education: 'Education',
+              occupation: 'Job/Business',
+              houseType: 'House Type',
+              country: 'Country',
+              city: 'City',
+              address: 'Address',
+              contactNumber: 'Contact Number',
+              submittedBy: 'Who is submitting'
+            };
+            
+            const fieldLabel = fieldLabels[err.field] || err.field;
+            missingFields.push(fieldLabel);
             console.log(`Validation Error - ${err.field}: ${err.message}`);
           });
+          
           setValidationErrors(errors);
           
-          // Create detailed error message with field names
-          const errorFields = Object.keys(errors).join(', ');
-          setError(`Please fix the following fields: ${errorFields}`);
+          // Determine which step has the error
+          const step1Fields = ['name', 'fatherName', 'gender', 'cast', 'maritalStatus', 'motherTongue', 'belongs', 'age', 'submittedBy', 'matchmakerName'];
+          const step2Fields = ['education', 'occupation'];
+          const step3Fields = ['houseType', 'country', 'city', 'address', 'contactNumber'];
+          
+          const errorFields = Object.keys(errors);
+          let errorStep = currentStep;
+          
+          if (errorFields.some(field => step1Fields.includes(field))) {
+            errorStep = 1;
+          } else if (errorFields.some(field => step2Fields.includes(field))) {
+            errorStep = 2;
+          } else if (errorFields.some(field => step3Fields.includes(field))) {
+            errorStep = 3;
+          }
+          
+          // Move to the step with error
+          if (errorStep !== currentStep) {
+            setCurrentStep(errorStep);
+          }
+          
+          // Create detailed error message with field names and step
+          const errorMessage = `❌ Missing Fields in Step ${errorStep}: ${missingFields.join(', ')}`;
+          setError(errorMessage);
           
           // Scroll to first error
           setTimeout(() => {
             const firstErrorField = document.querySelector('.border-red-500');
             if (firstErrorField) {
               firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+              window.scrollTo(0, 0);
             }
           }, 100);
         } else {
-          setError(errorData.error || 'Failed to create profile');
+          setError(errorData.error || 'Failed to create profile. Please check all required fields.');
         }
       }
     } catch (error) {
@@ -514,33 +726,95 @@ export default function FormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-4 px-4">
-      <div className="max-w-md mx-auto">
-        {/* Mobile Header */}
-        <div className="text-center mb-6">
-          <Link href="/" className="inline-flex items-center text-emerald-600 hover:text-emerald-700 mb-4 text-sm font-medium">
-            ← Back to Home
-          </Link>
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-white text-xl">💕</span>
+    <div className="min-h-screen bg-gradient-to-b from-teal-50/50 to-white flex flex-col">
+      {/* Header */}
+      <header className="px-5 pt-6 pb-4">
+        <div className="max-w-lg mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-11 h-11 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-200">
+              <span className="text-xl">💕</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">PerfectPair</h1>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800 tracking-tight">PerfectPair</h1>
+              <p className="text-[10px] text-teal-600 font-medium -mt-0.5">Create Your Profile</p>
+            </div>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Create Your Profile</h2>
-          <p className="text-sm text-gray-600">Join thousands who found their perfect match</p>
+          <Link 
+            href="/" 
+            className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center active:scale-95 transition-all shadow-sm"
+          >
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </Link>
         </div>
+      </header>
 
-        <form onSubmit={handleSubmit} noValidate className="bg-white rounded-2xl shadow-xl p-5 space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-              {error}
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto px-5 pb-16">
+        <div className="max-w-lg mx-auto">
+          {/* Draft Status */}
+          {typeof window !== 'undefined' && localStorage.getItem('formDraft') && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700 flex items-center justify-between">
+              <span>💾 Draft auto-saved! Your progress is secure.</span>
+              <button
+                onClick={() => {
+                  if (confirm('Clear saved progress? This cannot be undone.')) {
+                    localStorage.removeItem('formDraft');
+                    window.location.reload();
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 font-medium underline"
+              >
+                Clear
+              </button>
             </div>
           )}
 
-          {/* Profile Submission Info */}
+          {/* Progress Indicator */}
+          <div className="mb-6 bg-white border border-teal-100 rounded-2xl shadow-sm p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold text-gray-800">Step {currentStep} of {totalSteps}</span>
+              <span className="text-sm font-bold text-teal-600">{Math.round((currentStep / totalSteps) * 100)}%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-teal-500 to-emerald-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between mt-3 px-1">
+              <div className={`flex-1 text-center ${currentStep === 1 ? 'text-teal-600 font-bold' : currentStep > 1 ? 'text-teal-500' : 'text-gray-400'}`}>
+                <div className="text-[10px] font-medium">Personal</div>
+              </div>
+              <div className={`flex-1 text-center ${currentStep === 2 ? 'text-teal-600 font-bold' : currentStep > 2 ? 'text-teal-500' : 'text-gray-400'}`}>
+                <div className="text-[10px] font-medium">Details</div>
+              </div>
+              <div className={`flex-1 text-center ${currentStep === 3 ? 'text-teal-600 font-bold' : currentStep > 3 ? 'text-teal-500' : 'text-gray-400'}`}>
+                <div className="text-[10px] font-medium">Family</div>
+              </div>
+              <div className={`flex-1 text-center ${currentStep === 4 ? 'text-teal-600 font-bold' : 'text-gray-400'}`}>
+                <div className="text-[10px] font-medium">Partner</div>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} onKeyDown={(e) => {
+            if (e.key === 'Enter' && currentStep < 4) {
+              e.preventDefault();
+            }
+          }} noValidate className="bg-white border border-teal-100 rounded-2xl shadow-sm p-5 space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                {error}
+              </div>
+            )}
+
+          {/* STEP 1: Personal Information */}
+          {currentStep === 1 && (
+            <>
+          {/* Personal Information */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Submission Details</h2>
             <div className="space-y-4">
               
               {/* Who is submitting this profile */}
@@ -584,13 +858,6 @@ export default function FormPage() {
                 </div>
               )}
               
-            </div>
-          </div>
-
-          {/* Mobile-First Personal Information */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
-            <div className="space-y-4">
               {/* Name Fields - 50/50 Layout */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -768,154 +1035,82 @@ export default function FormPage() {
                 </div>
               </div>
 
-              {/* Maslak (Religious Sect) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Maslak (Religious Sect) *</label>
-                {!showCustomMaslak ? (
-                  <select
-                    name="maslak"
-                    required
-                    value={formData.maslak}
-                    onChange={(e) => {
-                      if (e.target.value === 'Other') {
-                        setShowCustomMaslak(true);
-                        setFormData({ ...formData, maslak: '' });
-                      } else {
-                        handleInputChange(e);
-                      }
-                    }}
-                    className={getSelectClasses('maslak')}
-                  >
-                    <option value="">Select Maslak</option>
-                  
-                  {/* Sunni Maslak */}
-                  <optgroup label="Sunni Islam">
-                    <option value="Hanafi">Hanafi</option>
-                    <option value="Shafi'i">Shafi&apos;i</option>
-                    <option value="Maliki">Maliki</option>
-                    <option value="Hanbali">Hanbali</option>
-                    <option value="Ahle Hadith">Ahle Hadith (Salafi)</option>
-                    <option value="Deobandi">Deobandi</option>
-                    <option value="Barelvi">Barelvi</option>
-                    <option value="Jamaat-e-Islami">Jamaat-e-Islami</option>
-                  </optgroup>
-                  
-                  {/* Shia Maslak */}
-                  <optgroup label="Shia Islam">
-                    <option value="Twelver Shia">Twelver Shia (Ithna Ashariyya)</option>
-                    <option value="Ismaili">Ismaili</option>
-                    <option value="Zaidi">Zaidi</option>
-                    <option value="Alavi Bohra">Alavi Bohra</option>
-                    <option value="Dawoodi Bohra">Dawoodi Bohra</option>
-                  </optgroup>
-                  
-                  {/* Sufi Orders */}
-                  <optgroup label="Sufi Orders">
-                    <option value="Chishti">Chishti</option>
-                    <option value="Qadri">Qadri</option>
-                    <option value="Naqshbandi">Naqshbandi</option>
-                    <option value="Suhrawardi">Suhrawardi</option>
-                  </optgroup>
-                  
-                  {/* Other Islamic Sects */}
-                  <optgroup label="Other Islamic Sects">
-                    <option value="Ahmadiyya">Ahmadiyya</option>
-                    <option value="Quranist">Quranist</option>
-                    <option value="Non-denominational">Non-denominational Muslim</option>
-                  </optgroup>
-                  
-                  {/* Non-Muslim Options */}
-                  <optgroup label="Other Religions">
-                    <option value="Christian">Christian</option>
-                    <option value="Hindu">Hindu</option>
-                    <option value="Sikh">Sikh</option>
-                    <option value="Other Religion">Other Religion</option>
-                  </optgroup>
-                  <option value="Other">Other (Custom)</option>
-                  </select>
-                ) : (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Enter your maslak"
+              {/* Marital Status and Age - 50/50 Layout */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Marital Status *</label>
+                  {!showCustomMaritalStatus ? (
+                    <select
+                      name="maritalStatus"
                       required
-                      value={customMaslak}
+                      value={formData.maritalStatus}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        setCustomMaslak(value);
-                        setFormData({ ...formData, maslak: value });
+                        if (e.target.value === 'Other') {
+                          setShowCustomMaritalStatus(true);
+                          setFormData({ ...formData, maritalStatus: '' });
+                        } else {
+                          handleInputChange(e);
+                        }
                       }}
-                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCustomMaslak(false);
-                        setCustomMaslak('');
-                        setFormData({ ...formData, maslak: '' });
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      className={getSelectClasses('maritalStatus')}
                     >
-                      ↩️
-                    </button>
-                  </div>
-                )}
+                      <option value="Single">Single</option>
+                      <option value="Divorced">Divorced</option>
+                      <option value="Widowed">Widowed</option>
+                      <option value="Separated">Separated</option>
+                      <option value="Other">Other (Custom)</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter marital status"
+                        required
+                        value={customMaritalStatus}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCustomMaritalStatus(value);
+                          setFormData({ ...formData, maritalStatus: value });
+                        }}
+                        className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomMaritalStatus(false);
+                          setCustomMaritalStatus('');
+                          setFormData({ ...formData, maritalStatus: 'Single' });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
+                      >
+                        ↩️
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
+                  <input
+                    type="number"
+                    name="age"
+                    required
+                    min="18"
+                    max="80"
+                    value={formData.age || ''}
+                    onChange={handleInputChange}
+                    className={getInputClasses('age')}
+                  />
+                  {validationErrors['age'] && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {validationErrors['age']}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Marital Status */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Marital Status *</label>
-                {!showCustomMaritalStatus ? (
-                  <select
-                    name="maritalStatus"
-                    required
-                    value={formData.maritalStatus}
-                    onChange={(e) => {
-                      if (e.target.value === 'Other') {
-                        setShowCustomMaritalStatus(true);
-                        setFormData({ ...formData, maritalStatus: '' });
-                      } else {
-                        handleInputChange(e);
-                      }
-                    }}
-                    className={getSelectClasses('maritalStatus')}
-                  >
-                    <option value="Single">Single</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                    <option value="Separated">Separated</option>
-                    <option value="Other">Other (Custom)</option>
-                  </select>
-                ) : (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Enter marital status"
-                      required
-                      value={customMaritalStatus}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setCustomMaritalStatus(value);
-                        setFormData({ ...formData, maritalStatus: value });
-                      }}
-                      className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCustomMaritalStatus(false);
-                        setCustomMaritalStatus('');
-                        setFormData({ ...formData, maritalStatus: 'Single' });
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
-                    >
-                      ↩️
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              {/* Mother Tongue and Belongs - 50/50 Layout */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Mother Tongue *</label>
                   {!showCustomMotherTongue ? (
@@ -1037,103 +1232,159 @@ export default function FormPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
-                  <input
-                    type="number"
-                    name="age"
-                    required
-                    min="18"
-                    max="80"
-                    value={formData.age || ''}
-                    onChange={handleInputChange}
-                    className={getInputClasses('age')}
-                  />
-                  {validationErrors['age'] && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {validationErrors['age']}
-                    </p>
-                  )}
-                </div>
-                
+            </div>
+          </div>
+            </>
+          )}
+
+          {/* STEP 2: Physical Details, Maslak, Education & Photo */}
+          {currentStep === 2 && (
+            <>
+          {/* Physical Details Section */}
+          <div>
+            <div className="space-y-4">
+              {/* Height & Weight - 50/50 Layout */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Height</label>
-                  <input
-                    type="text"
+                  <select
                     name="height"
-                    placeholder="5.6 feet"
                     value={formData.height}
                     onChange={handleInputChange}
-                    className={getInputClasses('height')}
-                  />
-                  {validationErrors['height'] && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {validationErrors['height']}
-                    </p>
-                  )}
+                    className={getSelectClasses('height')}
+                  >
+                    <option value="4.0">4&apos;0&quot;</option>
+                    <option value="4.1">4&apos;1&quot;</option>
+                    <option value="4.2">4&apos;2&quot;</option>
+                    <option value="4.3">4&apos;3&quot;</option>
+                    <option value="4.4">4&apos;4&quot;</option>
+                    <option value="4.5">4&apos;5&quot;</option>
+                    <option value="4.6">4&apos;6&quot;</option>
+                    <option value="4.7">4&apos;7&quot;</option>
+                    <option value="4.8">4&apos;8&quot;</option>
+                    <option value="4.9">4&apos;9&quot;</option>
+                    <option value="4.10">4&apos;10&quot;</option>
+                    <option value="4.11">4&apos;11&quot;</option>
+                    <option value="5.0">5&apos;0&quot;</option>
+                    <option value="5.1">5&apos;1&quot;</option>
+                    <option value="5.2">5&apos;2&quot;</option>
+                    <option value="5.3">5&apos;3&quot;</option>
+                    <option value="5.4">5&apos;4&quot;</option>
+                    <option value="5.5">5&apos;5&quot;</option>
+                    <option value="5.6">5&apos;6&quot;</option>
+                    <option value="5.7">5&apos;7&quot;</option>
+                    <option value="5.8">5&apos;8&quot;</option>
+                    <option value="5.9">5&apos;9&quot;</option>
+                    <option value="5.10">5&apos;10&quot;</option>
+                    <option value="5.11">5&apos;11&quot;</option>
+                    <option value="6.0">6&apos;0&quot;</option>
+                    <option value="6.1">6&apos;1&quot;</option>
+                    <option value="6.2">6&apos;2&quot;</option>
+                    <option value="6.3">6&apos;3&quot;</option>
+                    <option value="6.4">6&apos;4&quot;</option>
+                    <option value="6.5">6&apos;5&quot;</option>
+                  </select>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Weight</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
                   <input
-                    type="text"
+                    type="number"
                     name="weight"
-                    placeholder="65 kg"
+                    min="30"
+                    max="200"
                     value={formData.weight}
                     onChange={handleInputChange}
                     className={getInputClasses('weight')}
                   />
-                  {validationErrors['weight'] && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {validationErrors['weight']}
-                    </p>
-                  )}
                 </div>
-                
+              </div>
+
+              {/* Maslak and Complexion - 50/50 Layout */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Complexion</label>
-                  {!showCustomComplexion ? (
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Maslak (Religious Sect)</label>
+                  {!showCustomMaslak ? (
                     <select
-                      name="color"
-                      value={formData.color}
+                      name="maslak"
+                      value={formData.maslak}
                       onChange={(e) => {
                         if (e.target.value === 'Other') {
-                          setShowCustomComplexion(true);
-                          setFormData({ ...formData, color: '' });
+                          setShowCustomMaslak(true);
+                          setFormData({ ...formData, maslak: '' });
                         } else {
                           handleInputChange(e);
                         }
                       }}
-                      className={getSelectClasses('color')}
+                      className={getSelectClasses('maslak')}
                     >
-                      <option value="">Select</option>
-                      <option value="Fair">Fair</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Dark">Dark</option>
-                      <option value="Other">Other (Custom)</option>
+                      <option value="">Select Maslak</option>
+                    
+                    {/* Sunni Maslak */}
+                    <optgroup label="Sunni Islam">
+                      <option value="Hanafi">Hanafi</option>
+                      <option value="Shafi'i">Shafi&apos;i</option>
+                      <option value="Maliki">Maliki</option>
+                      <option value="Hanbali">Hanbali</option>
+                      <option value="Ahle Hadith">Ahle Hadith (Salafi)</option>
+                      <option value="Deobandi">Deobandi</option>
+                      <option value="Barelvi">Barelvi</option>
+                      <option value="Jamaat-e-Islami">Jamaat-e-Islami</option>
+                    </optgroup>
+                    
+                    {/* Shia Maslak */}
+                    <optgroup label="Shia Islam">
+                      <option value="Twelver Shia">Twelver Shia (Ithna Ashariyya)</option>
+                      <option value="Ismaili">Ismaili</option>
+                      <option value="Zaidi">Zaidi</option>
+                      <option value="Alavi Bohra">Alavi Bohra</option>
+                      <option value="Dawoodi Bohra">Dawoodi Bohra</option>
+                    </optgroup>
+                    
+                    {/* Sufi Orders */}
+                    <optgroup label="Sufi Orders">
+                      <option value="Chishti">Chishti</option>
+                      <option value="Qadri">Qadri</option>
+                      <option value="Naqshbandi">Naqshbandi</option>
+                      <option value="Suhrawardi">Suhrawardi</option>
+                    </optgroup>
+                    
+                    {/* Other Islamic Sects */}
+                    <optgroup label="Other Islamic Sects">
+                      <option value="Ahmadiyya">Ahmadiyya</option>
+                      <option value="Quranist">Quranist</option>
+                      <option value="Non-denominational">Non-denominational Muslim</option>
+                    </optgroup>
+                    
+                    {/* Non-Muslim Options */}
+                    <optgroup label="Other Religions">
+                      <option value="Christian">Christian</option>
+                      <option value="Hindu">Hindu</option>
+                      <option value="Sikh">Sikh</option>
+                      <option value="Other Religion">Other Religion</option>
+                    </optgroup>
+                    <option value="Other">Other (Custom)</option>
                     </select>
                   ) : (
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="Enter complexion"
-                        value={customComplexion}
+                        placeholder="Enter your maslak"
+                        required
+                        value={customMaslak}
                         onChange={(e) => {
                           const value = e.target.value;
-                          setCustomComplexion(value);
-                          setFormData({ ...formData, color: value });
+                          setCustomMaslak(value);
+                          setFormData({ ...formData, maslak: value });
                         }}
                         className="w-full px-3 py-2.5 pr-12 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-400 transition-colors duration-200 touch-manipulation font-light bg-white"
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          setShowCustomComplexion(false);
-                          setCustomComplexion('');
-                          setFormData({ ...formData, color: '' });
+                          setShowCustomMaslak(false);
+                          setCustomMaslak('');
+                          setFormData({ ...formData, maslak: '' });
                         }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 px-2 py-1 rounded"
                       >
@@ -1142,66 +1393,27 @@ export default function FormPage() {
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* Photo Upload Section */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  {photoPreview ? (
-                    <div className="space-y-4">
-                      <div className="relative inline-block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={photoPreview}
-                          alt="Profile preview"
-                          className="w-32 h-32 object-cover rounded-full mx-auto border-4 border-emerald-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={removePhoto}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-600">Photo selected successfully!</p>
-                      <label className="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 cursor-pointer transition-colors font-light">
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handlePhotoChange}
-                        />
-                        Change Photo
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-4xl">📸</div>
-                      <div>
-                        <p className="text-sm text-gray-600 mb-2">Upload your profile photo</p>
-                        <p className="text-xs text-gray-500 mb-4">Maximum size: 5MB | Formats: JPG, PNG, GIF</p>
-                        <label className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg cursor-pointer transition-all touch-manipulation font-light shadow-md hover:shadow-lg">
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handlePhotoChange}
-                          />
-                          📷 Choose Photo
-                        </label>
-                      </div>
-                    </div>
-                  )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Complexion</label>
+                  <select
+                    name="color"
+                    value={formData.color}
+                    onChange={handleInputChange}
+                    className={getSelectClasses('color')}
+                  >
+                    <option value="Fair">Fair</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Wheatish">Wheatish</option>
+                    <option value="Dark">Dark</option>
+                  </select>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Professional Information */}
+          {/* Education & Career Section */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Professional Information</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Education *</label>
@@ -1505,12 +1717,66 @@ export default function FormPage() {
                   <option value="Prefer not to say">Prefer not to say</option>
                 </select>
               </div>
+
+              {/* Photo Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
+                  {photoPreview ? (
+                    <div className="space-y-2">
+                      <div className="relative inline-block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photoPreview}
+                          alt="Profile preview"
+                          className="w-20 h-20 object-cover rounded-full mx-auto border-2 border-emerald-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={removePhoto}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-600">Photo selected</p>
+                      <label className="inline-flex items-center px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 cursor-pointer transition-colors font-light">
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                        />
+                        Change
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-2xl">📸</div>
+                      <p className="text-xs text-gray-600">Upload photo</p>
+                      <label className="inline-flex items-center px-4 py-2 text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg cursor-pointer transition-all touch-manipulation font-light">
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                        />
+                        📷 Choose
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+            </>
+          )}
 
+          {/* STEP 3: Family & Contact Information */}
+          {currentStep === 3 && (
+            <>
           {/* Family & Contact Information */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Family & Contact Information</h2>
             <div className="space-y-4">
               <div className="space-y-4">
                 <div>
@@ -1601,18 +1867,6 @@ export default function FormPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Additional Family Details</label>
-                <textarea
-                  name="familyDetails"
-                  rows={3}
-                  placeholder="Tell us about your family background..."
-                  value={formData.familyDetails}
-                  onChange={handleInputChange}
-                  className={textareaClasses}
-                />
               </div>
 
               <div>
@@ -1864,9 +2118,26 @@ export default function FormPage() {
                   </p>
                 )}
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Additional Family Details</label>
+                <textarea
+                  name="familyDetails"
+                  rows={3}
+                  placeholder="Tell us about your family background..."
+                  value={formData.familyDetails}
+                  onChange={handleInputChange}
+                  className={textareaClasses}
+                />
+              </div>
             </div>
           </div>
+            </>
+          )}
 
+          {/* STEP 4: Partner Requirements */}
+          {currentStep === 4 && (
+            <>
           {/* Partner Requirements */}
           <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-xl relative overflow-hidden -mx-5">
             <div className="px-5 py-6">
@@ -1890,13 +2161,24 @@ export default function FormPage() {
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <span className="text-pink-500">🎂</span>
                   Preferred Age Range
+                  <span className="text-red-500">*</span>
                 </label>
+                {validationErrors.ageRange && (
+                  <p className="text-red-500 text-xs mb-1">{validationErrors.ageRange}</p>
+                )}
                 {!showCustomReqAgeRange ? (
                   <div className="flex gap-2">
                     <select
                       name="requirements.ageRange"
                       value={`${formData.requirements.ageRange.min}-${formData.requirements.ageRange.max}`}
                       onChange={(e) => {
+                        // Clear error
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.ageRange;
+                          return newErrors;
+                        });
+                        
                         if (e.target.value === 'custom') {
                           setShowCustomReqAgeRange(true);
                           setCustomReqAgeMin(formData.requirements.ageRange.min.toString());
@@ -1942,6 +2224,13 @@ export default function FormPage() {
                         placeholder="Min age"
                         value={customReqAgeMin}
                         onChange={(e) => {
+                          // Clear error
+                          setValidationErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.ageRange;
+                            return newErrors;
+                          });
+                          
                           setCustomReqAgeMin(e.target.value);
                           if (e.target.value && customReqAgeMax) {
                             setFormData(prev => ({
@@ -1961,6 +2250,13 @@ export default function FormPage() {
                         placeholder="Max age"
                         value={customReqAgeMax}
                         onChange={(e) => {
+                          // Clear error
+                          setValidationErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.ageRange;
+                            return newErrors;
+                          });
+                          
                           setCustomReqAgeMax(e.target.value);
                           if (customReqAgeMin && e.target.value) {
                             setFormData(prev => ({
@@ -2089,14 +2385,25 @@ export default function FormPage() {
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <span className="text-blue-500">🎓</span>
                   Preferred Education Level
+                  <span className="text-red-500">*</span>
                 </label>
-                {formData.requirements.education === 'Other' ? (
+                {validationErrors.education && (
+                  <p className="text-red-500 text-xs mb-1">{validationErrors.education}</p>
+                )}
+                {showCustomReqEducation ? (
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="Enter custom education requirement"
                       value={customReqEducation}
                       onChange={(e) => {
+                        // Clear error
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.education;
+                          return newErrors;
+                        });
+                        
                         setCustomReqEducation(e.target.value);
                         setFormData(prev => ({
                           ...prev,
@@ -2111,6 +2418,7 @@ export default function FormPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setShowCustomReqEducation(false);
                         setFormData(prev => ({
                           ...prev,
                           requirements: {
@@ -2130,7 +2438,21 @@ export default function FormPage() {
                   <select
                     name="requirements.education"
                     value={formData.requirements.education}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      // Clear error
+                      setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.education;
+                        return newErrors;
+                      });
+                      
+                      if (e.target.value === 'Other') {
+                        setShowCustomReqEducation(true);
+                        setCustomReqEducation('');
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className={selectClasses}
                   >
                     <option value="">Select Minimum Education</option>
@@ -2176,7 +2498,7 @@ export default function FormPage() {
                   <span className="text-green-500">💼</span>
                   Partner&apos;s Preferred Work/Job
                 </label>
-                {formData.requirements.occupation === 'Other' ? (
+                {showCustomReqOccupation ? (
                   <div className="relative">
                     <input
                       type="text"
@@ -2197,6 +2519,7 @@ export default function FormPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setShowCustomReqOccupation(false);
                         setFormData(prev => ({
                           ...prev,
                           requirements: {
@@ -2216,7 +2539,14 @@ export default function FormPage() {
                   <select
                     name="requirements.occupation"
                     value={formData.requirements.occupation}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomReqOccupation(true);
+                        setCustomReqOccupation('');
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className={selectClasses}
                   >
                     <option value="">Select Preferred Occupation</option>
@@ -2269,7 +2599,7 @@ export default function FormPage() {
                   <span className="text-orange-500">🏠</span>
                   Preferred Family Type
                 </label>
-                {formData.requirements.familyType === 'Other' ? (
+                {showCustomReqFamilyType ? (
                   <div className="relative">
                     <input
                       type="text"
@@ -2290,6 +2620,7 @@ export default function FormPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setShowCustomReqFamilyType(false);
                         setFormData(prev => ({
                           ...prev,
                           requirements: {
@@ -2309,7 +2640,14 @@ export default function FormPage() {
                   <select
                     name="requirements.familyType"
                     value={formData.requirements.familyType}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setShowCustomReqFamilyType(true);
+                        setCustomReqFamilyType('');
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className={selectClasses}
                   >
                     <option value="">Select family type</option>
@@ -2366,7 +2704,7 @@ export default function FormPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-1">
-                      {locationOptions.map(location => (
+                      {['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala', 'Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Delhi', 'Mumbai', 'Kolkata', 'Chennai', 'Bangalore', 'Hyderabad', 'London', 'New York', 'Toronto', 'Sydney', 'Dubai', 'Riyadh', 'Same City', 'Any'].map(location => (
                         <label key={location} className="flex items-center space-x-2 p-1 hover:bg-white rounded">
                           <input
                             type="checkbox"
@@ -2416,7 +2754,13 @@ export default function FormPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Cast</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Preferred Cast
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                {validationErrors.cast && (
+                  <p className="text-red-500 text-xs mb-1">{validationErrors.cast}</p>
+                )}
                 
                 {/* Clickable Input Display */}
                 <div 
@@ -2863,7 +3207,13 @@ export default function FormPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Marital Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Preferred Marital Status
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                {validationErrors.maritalStatus && (
+                  <p className="text-red-500 text-xs mb-1">{validationErrors.maritalStatus}</p>
+                )}
                 
                 {/* Clickable Input Display */}
                 <div 
@@ -2902,7 +3252,15 @@ export default function FormPage() {
                           <input
                             type="checkbox"
                             checked={formData.requirements.maritalStatus.includes(status)}
-                            onChange={(e) => handleCheckboxChange('maritalStatus', status, e.target.checked)}
+                            onChange={(e) => {
+                              // Clear error
+                              setValidationErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.maritalStatus;
+                                return newErrors;
+                              });
+                              handleCheckboxChange('maritalStatus', status, e.target.checked);
+                            }}
                             className="mr-2 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                           />
                           {status}
@@ -3158,26 +3516,52 @@ export default function FormPage() {
             </div>
             </div>
           </div>
+            </>
+          )}
 
-          {/* Submit Button */}
-          <div className="text-center pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 active:from-emerald-600 active:to-teal-700 text-white px-6 py-3 rounded-lg text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95 touch-manipulation"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  {photoUploading ? 'Uploading Photo...' : 'Creating Profile...'}
-                </div>
-              ) : (
-                'Create Profile 💕'
-              )}
-            </button>
+          {/* Navigation Buttons */}
+          <div className="flex gap-2 pt-4">
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition-all shadow-sm active:scale-95 touch-manipulation font-medium"
+              >
+                ← Previous
+              </button>
+            )}
+            
+            {currentStep < 4 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg text-sm transition-all shadow-sm active:scale-95 touch-manipulation font-medium"
+              >
+                Next Step →
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-95 touch-manipulation font-medium"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    {photoUploading ? 'Uploading Photo...' : 'Creating Profile...'}
+                  </div>
+                ) : (
+                  'Submit Profile 💕'
+                )}
+              </button>
+            )}
           </div>
         </form>
-      </div>
+        </div>
+      </main>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 }
