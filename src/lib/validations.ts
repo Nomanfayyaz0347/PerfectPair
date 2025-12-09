@@ -14,23 +14,15 @@ export const profileSchema = z.object({
   color: z.string().min(1, 'Complexion is required'),
   cast: z.string().min(1, 'Cast is required'),
   maslak: z.string().min(1, 'Maslak is required'),
-  maritalStatus: z.enum(['Single', 'Divorced', 'Widowed', 'Separated'], {
-    message: 'Invalid marital status',
-  }),
-  motherTongue: z.enum([
-    'Urdu', 'English', 'Punjabi', 'Sindhi', 'Pashto', 'Balochi', 
-    'Saraiki', 'Hindko', 'Kashmiri', 'Arabic', 'Persian', 'Turkish', 'Other'
-  ]),
-  belongs: z.enum([
-    'Pakistan', 'Bangladesh', 'India', 'Afghanistan', 'Iran', 'Turkey', 
-    'Saudi Arabia', 'UAE', 'UK', 'USA', 'Canada', 'Australia', 'Other'
-  ]),
+  maritalStatus: z.string().min(1, 'Marital status is required'),
+  motherTongue: z.string().min(1, 'Mother tongue is required'),
+  belongs: z.string().min(1, 'Belongs is required'),
 
   // Education & Career
   education: z.string().min(1, 'Education is required'),
   occupation: z.string().min(1, 'Occupation is required'),
   income: z.string().optional(),
-  houseType: z.enum(['Own House', 'Rent', 'Family House', 'Apartment']),
+  houseType: z.string().min(1, 'House type is required'),
 
   // Family Details
   fatherAlive: z.boolean(),

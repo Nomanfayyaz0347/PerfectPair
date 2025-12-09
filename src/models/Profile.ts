@@ -104,37 +104,22 @@ const ProfileSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    enum: [
-      // Sunni Islam
-      'Hanafi', 'Shafi\'i', 'Maliki', 'Hanbali', 'Ahle Hadith', 'Deobandi', 'Barelvi', 'Jamaat-e-Islami',
-      // Shia Islam
-      'Twelver Shia', 'Ismaili', 'Zaidi', 'Alavi Bohra', 'Dawoodi Bohra',
-      // Sufi Orders
-      'Chishti', 'Qadri', 'Naqshbandi', 'Suhrawardi',
-      // Other Islamic Sects
-      'Ahmadiyya', 'Quranist', 'Non-denominational',
-      // Other Religions
-      'Christian', 'Hindu', 'Sikh', 'Other Religion'
-    ]
   },
   maritalStatus: {
     type: String,
     required: true,
     trim: true,
-    enum: ['Single', 'Divorced', 'Widowed', 'Separated'],
     default: 'Single'
   },
   motherTongue: {
     type: String,
     required: true,
     trim: true,
-    enum: ['Urdu', 'English', 'Punjabi', 'Sindhi', 'Pashto', 'Balochi', 'Saraiki', 'Hindko', 'Kashmiri', 'Arabic', 'Persian', 'Turkish', 'Other']
   },
   belongs: {
     type: String,
     required: true,
     trim: true,
-    enum: ['Pakistan', 'Bangladesh', 'India', 'Afghanistan', 'Iran', 'Turkey', 'Saudi Arabia', 'UAE', 'UK', 'USA', 'Canada', 'Australia', 'Other']
   },
   education: {
     type: String,
@@ -193,14 +178,13 @@ const ProfileSchema = new mongoose.Schema({
   houseType: {
     type: String,
     required: true,
-    enum: ['Own House', 'Rent', 'Family House', 'Apartment'],
+    trim: true,
     default: 'Family House'
   },
   country: {
     type: String,
     required: true,
     trim: true,
-    enum: ['Pakistan', 'Bangladesh', 'India', 'Afghanistan', 'Iran', 'Turkey', 'Saudi Arabia', 'UAE', 'UK', 'USA', 'Canada', 'Australia', 'Other'],
     default: 'Pakistan'
   },
   city: {
